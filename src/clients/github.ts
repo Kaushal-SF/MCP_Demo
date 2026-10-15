@@ -1,0 +1,319 @@
+import { Octokit } from '@octokit/rest';
+import { mapGitHubError } from '../lib/errors.js';
+import { formatPullRequestRef, type PullRequestRef, type RepoRef } from '../lib/pr-ref.js';
+
+// ---------------------------------------------------------------------------
+// Domain types — a small, stable shape instead of leaking raw GitHub API JSON
+// into services and tool outputs.
+// ---------------------------------------------------------------------------
+
+export type PullRequestState = 'open' | 'closed' | 'merged';
+
+export interface PullRequestInfo {
+  ref: PullRequestRef;
+  url: string;
+  title: string;
+  /** Author-written Markdown. Untrusted content. */
+  body: string;
+  author: string;
+  state: PullRequestState;
+  draft: boolean;
+  baseBranch: string;
+  headBranch: string;
+  headSha: string;
+  createdAt: string;
+  updatedAt: string;
+  mergedAt: string | null;
+  additions: number;
+  deletions: number;
+  changedFiles: number;
+  commits: number;
+  labels: string[];
+  requestedReviewers: string[];
+}
+
+export type FileStatus =
+  'added' | 'removed' | 'modified' | 'renamed' | 'copied' | 'changed' | 'unchanged';
+
+export interface ChangedFile {
+  path: string;
+  status: FileStatus;
+  additions: number;
+  deletions: number;
+  previousPath?: string;
+}
+
+export type CheckState = 'success' | 'failure' | 'pending' | 'none';
+
+export interface FailingCheck {
+  name: string;
+  conclusion: string;
+  url?: string;
+}
+
+export interface CheckSummary {
+  state: CheckState;
+  total: number;
+  passed: number;
+  failed: number;
+  pending: number;
+  /** Skipped / neutral / stale — neither passing nor failing. */
+  other: number;
+  failing: FailingCheck[];
+}
+
+export interface ReviewRequestItem {
+  ref: PullRequestRef;
+  url: string;
+  title: string;
+  author: string;
+  draft: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SearchPage<T> {
+  items: T[];
+  totalCount: number;
+}
+
+/** The port that services depend on. Tests provide a fake implementation. */
+export interface GitHubClient {
+  getAuthenticatedLogin(): Promise<string>;
+  getPullRequest(ref: PullRequestRef): Promise<PullRequestInfo>;
+  listPullRequestFiles(
+    ref: PullRequestRef,
+    limit: number,
+  ): Promise<{ files: ChangedFile[]; truncated: boolean }>;
+  getCheckSummary(repo: RepoRef, sha: string): Promise<CheckSummary>;
+  searchReviewRequests(params: {
+    login: string;
+    repo?: RepoRef;
+    page: number;
+    perPage: number;
+  }): Promise<SearchPage<ReviewRequestItem>>;
+}
+
+// ---------------------------------------------------------------------------
+// Octokit-backed implementation
+// ---------------------------------------------------------------------------
+
+const FAILED_CONCLUSIONS = new Set([
+  'failure',
+  'timed_out',
+  'cancelled',
+  'action_required',
+  'startup_failure',
+  'error',
+]);
+
+export interface OctokitGitHubClientOptions {
+  token: string;
+  apiUrl?: string | undefined;
+  userAgent: string;
+}
+
+export class OctokitGitHubClient implements GitHubClient {
+  private readonly octokit: Octokit;
+  private loginPromise: Promise<string> | undefined;
+
+  constructor(options: OctokitGitHubClientOptions) {
+    this.octokit = new Octokit({
+      auth: options.token,
+      userAgent: options.userAgent,
+      ...(options.apiUrl ? { baseUrl: options.apiUrl } : {}),
+      // Keep Octokit quiet: its default logger writes warnings to stdout-adjacent console methods.
+      log: {
+        debug: () => undefined,
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      },
+    });
+  }
+
+  getAuthenticatedLogin(): Promise<string> {
+    // Cached: the login never changes for a given token.
+    this.loginPromise ??= this.octokit.rest.users
+      .getAuthenticated()
+      .then((res) => res.data.login)
+      .catch((error: unknown) => {
+        this.loginPromise = undefined;
+        throw mapGitHubError(error, 'the authenticated user');
+      });
+    return this.loginPromise;
+  }
+
+  async getPullRequest(ref: PullRequestRef): Promise<PullRequestInfo> {
+    try {
+      const { data } = await this.octokit.rest.pulls.get({
+        owner: ref.owner,
+        repo: ref.repo,
+        pull_number: ref.number,
+      });
+      return {
+        ref,
+        url: data.html_url,
+        title: data.title,
+        body: data.body ?? '',
+        author: data.user.login,
+        state: data.merged_at ? 'merged' : data.state === 'open' ? 'open' : 'closed',
+        draft: data.draft ?? false,
+        baseBranch: data.base.ref,
+        headBranch: data.head.ref,
+        headSha: data.head.sha,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        mergedAt: data.merged_at,
+        additions: data.additions,
+        deletions: data.deletions,
+        changedFiles: data.changed_files,
+        commits: data.commits,
+        labels: data.labels.map((label) => label.name),
+        requestedReviewers: (data.requested_reviewers ?? []).map((user) => user.login),
+      };
+    } catch (error) {
+      throw mapGitHubError(error, `pull request ${formatPullRequestRef(ref)}`);
+    }
+  }
+
+  async listPullRequestFiles(
+    ref: PullRequestRef,
+    limit: number,
+  ): Promise<{ files: ChangedFile[]; truncated: boolean }> {
+    const files: ChangedFile[] = [];
+    try {
+      const pages = this.octokit.paginate.iterator(this.octokit.rest.pulls.listFiles, {
+        owner: ref.owner,
+        repo: ref.repo,
+        pull_number: ref.number,
+        per_page: 100,
+      });
+      for await (const page of pages) {
+        for (const file of page.data) {
+          if (files.length >= limit) return { files, truncated: true };
+          files.push({
+            path: file.filename,
+            status: file.status,
+            additions: file.additions,
+            deletions: file.deletions,
+            ...(file.previous_filename ? { previousPath: file.previous_filename } : {}),
+          });
+        }
+      }
+      return { files, truncated: false };
+    } catch (error) {
+      throw mapGitHubError(error, `files of pull request ${formatPullRequestRef(ref)}`);
+    }
+  }
+
+  async getCheckSummary(repo: RepoRef, sha: string): Promise<CheckSummary> {
+    try {
+      // GitHub has two CI systems: Checks API (GitHub Actions, most apps) and legacy commit statuses.
+      const [checkRuns, combined] = await Promise.all([
+        this.octokit.paginate(this.octokit.rest.checks.listForRef, {
+          owner: repo.owner,
+          repo: repo.repo,
+          ref: sha,
+          per_page: 100,
+        }),
+        this.octokit.rest.repos.getCombinedStatusForRef({
+          owner: repo.owner,
+          repo: repo.repo,
+          ref: sha,
+        }),
+      ]);
+
+      const summary: CheckSummary = {
+        state: 'none',
+        total: 0,
+        passed: 0,
+        failed: 0,
+        pending: 0,
+        other: 0,
+        failing: [],
+      };
+
+      for (const run of checkRuns) {
+        summary.total++;
+        if (run.status !== 'completed') summary.pending++;
+        else if (run.conclusion === 'success') summary.passed++;
+        else if (run.conclusion && FAILED_CONCLUSIONS.has(run.conclusion)) {
+          summary.failed++;
+          summary.failing.push({
+            name: run.name,
+            conclusion: run.conclusion,
+            ...(run.html_url ? { url: run.html_url } : {}),
+          });
+        } else summary.other++;
+      }
+
+      for (const status of combined.data.statuses) {
+        summary.total++;
+        if (status.state === 'success') summary.passed++;
+        else if (status.state === 'pending') summary.pending++;
+        else {
+          summary.failed++;
+          summary.failing.push({
+            name: status.context,
+            conclusion: status.state,
+            ...(status.target_url ? { url: status.target_url } : {}),
+          });
+        }
+      }
+
+      summary.state =
+        summary.total === 0
+          ? 'none'
+          : summary.failed > 0
+            ? 'failure'
+            : summary.pending > 0
+              ? 'pending'
+              : 'success';
+      return summary;
+    } catch (error) {
+      throw mapGitHubError(error, `CI checks for ${repo.owner}/${repo.repo}@${sha.slice(0, 7)}`);
+    }
+  }
+
+  async searchReviewRequests(params: {
+    login: string;
+    repo?: RepoRef;
+    page: number;
+    perPage: number;
+  }): Promise<SearchPage<ReviewRequestItem>> {
+    const qualifiers = [
+      'is:pr',
+      'is:open',
+      'archived:false',
+      `review-requested:${params.login}`,
+      ...(params.repo ? [`repo:${params.repo.owner}/${params.repo.repo}`] : []),
+    ];
+    try {
+      const { data } = await this.octokit.rest.search.issuesAndPullRequests({
+        q: qualifiers.join(' '),
+        sort: 'created',
+        order: 'asc', // oldest first: those have waited longest
+        page: params.page,
+        per_page: params.perPage,
+      });
+      return {
+        totalCount: data.total_count,
+        items: data.items.map((item) => {
+          const [owner = '', repo = ''] = item.repository_url.split('/').slice(-2);
+          return {
+            ref: { owner, repo, number: item.number },
+            url: item.html_url,
+            title: item.title,
+            author: item.user?.login ?? 'unknown',
+            draft: item.draft ?? false,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+          };
+        }),
+      };
+    } catch (error) {
+      throw mapGitHubError(error, 'review requests (GitHub search)');
+    }
+  }
+}
