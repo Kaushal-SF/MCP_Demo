@@ -33,10 +33,14 @@ export async function getPrContext(
   ref: PullRequestRef,
   options: PrContextOptions,
 ): Promise<PrContext> {
+  // The PR comes first because its head SHA is needed to look up CI. Files and CI do not depend
+  // on each other, so those two requests run in parallel.
   const pr = await github.getPullRequest(ref);
 
   const [fileResult, checksResult] = await Promise.all([
     github.listPullRequestFiles(ref, options.maxFiles),
+    // then(onSuccess, onFailure) turns a CI failure into a value, so Promise.all does not reject
+    // and throw away the file list that succeeded.
     github.getCheckSummary(ref, pr.headSha).then(
       (checks) => ({ checks, error: undefined }),
       (error: unknown) => ({

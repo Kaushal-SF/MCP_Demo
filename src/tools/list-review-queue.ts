@@ -20,6 +20,7 @@ export function registerListReviewQueue(server: McpServer, ctx: ToolContext): vo
           .string()
           .optional()
           .describe('Only include PRs from this repository (owner/repo). Omit for all repos.'),
+        // Max 30 because every item costs one extra GitHub call to fetch its size (see listReviewQueue).
         limit: z
           .number()
           .int()

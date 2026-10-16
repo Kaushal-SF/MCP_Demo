@@ -31,10 +31,14 @@ export function registerAnalyzePrRisk(server: McpServer, ctx: ToolContext): void
     },
     ({ pr }) =>
       runTool(ctx.logger, 'analyze_pr_risk', async () => {
+        // Same service as get_pr_context, so both tools always see identical data. The analysis
+        // itself is pure and makes no further API calls.
         const context = await getPrContext(ctx.github, parsePullRequestRef(pr), {
           maxFiles: MAX_FILES_FOR_ANALYSIS,
         });
         const risk = analyzeRisk(context, { extraSensitivePaths: ctx.extraSensitivePaths });
+        // Only a PR summary: the model usually has full context from get_pr_context already, so
+        // repeating it here would just spend tokens.
         return {
           pr: { ref: context.pr.ref, url: context.pr.url, title: context.pr.title },
           risk,

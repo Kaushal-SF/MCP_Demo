@@ -29,6 +29,8 @@ interface HttpLikeError {
   response?: { headers?: Record<string, string | number | undefined> };
 }
 
+// Duck-typed instead of `instanceof RequestError` so we do not depend on an Octokit-internal
+// package; any HTTP client error with a numeric `status` is handled the same way.
 function isHttpLikeError(error: unknown): error is HttpLikeError {
   return (
     typeof error === 'object' &&
@@ -58,6 +60,8 @@ export function mapGitHubError(error: unknown, what: string): DevflowError {
         'GitHub rejected the token (401). Check that GITHUB_TOKEN is set and not expired.',
         { cause: error },
       );
+    // GitHub signals rate limits with 403 + `x-ratelimit-remaining: 0` (and secondary limits
+    // sometimes with 429), so a 403 must be told apart from a real permission problem.
     case 403:
     case 429: {
       if (headers['x-ratelimit-remaining'] === '0' || error.status === 429) {

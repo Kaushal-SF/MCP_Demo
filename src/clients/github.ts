@@ -98,6 +98,10 @@ export interface GitHubClient {
 // Octokit-backed implementation
 // ---------------------------------------------------------------------------
 
+/**
+ * Conclusions that should block a merge. 'neutral', 'skipped' and 'stale' are deliberately absent:
+ * they count as `other`, so a skipped optional job never makes a PR look broken.
+ */
 const FAILED_CONCLUSIONS = new Set([
   'failure',
   'timed_out',
@@ -122,7 +126,8 @@ export class OctokitGitHubClient implements GitHubClient {
       auth: options.token,
       userAgent: options.userAgent,
       ...(options.apiUrl ? { baseUrl: options.apiUrl } : {}),
-      // Keep Octokit quiet: its default logger writes warnings to stdout-adjacent console methods.
+      // Octokit's default logger prints unstructured console warnings (e.g. deprecation notices).
+      // Silence it: failures are already turned into DevflowErrors and logged as JSON by runTool.
       log: {
         debug: () => undefined,
         info: () => undefined,
@@ -133,7 +138,9 @@ export class OctokitGitHubClient implements GitHubClient {
   }
 
   getAuthenticatedLogin(): Promise<string> {
-    // Cached: the login never changes for a given token.
+    // Cache the promise, not the value, so concurrent first calls share one request. The login
+    // never changes for a given token. On failure the cache is cleared so a temporary error is
+    // retried next time instead of being remembered forever.
     this.loginPromise ??= this.octokit.rest.users
       .getAuthenticated()
       .then((res) => res.data.login)
@@ -157,6 +164,7 @@ export class OctokitGitHubClient implements GitHubClient {
         title: data.title,
         body: data.body ?? '',
         author: data.user.login,
+        // GitHub reports merged PRs as state "closed"; merged_at is what tells them apart.
         state: data.merged_at ? 'merged' : data.state === 'open' ? 'open' : 'closed',
         draft: data.draft ?? false,
         baseBranch: data.base.ref,
@@ -183,6 +191,8 @@ export class OctokitGitHubClient implements GitHubClient {
   ): Promise<{ files: ChangedFile[]; truncated: boolean }> {
     const files: ChangedFile[] = [];
     try {
+      // The iterator (rather than paginate(), which fetches everything) stops requesting pages as
+      // soon as the limit is reached; GitHub can list up to 3,000 files.
       const pages = this.octokit.paginate.iterator(this.octokit.rest.pulls.listFiles, {
         owner: ref.owner,
         repo: ref.repo,
@@ -285,7 +295,8 @@ export class OctokitGitHubClient implements GitHubClient {
     const qualifiers = [
       'is:pr',
       'is:open',
-      'archived:false',
+      'archived:false', // archived repos are read-only, so their review requests are dead ends
+      // An explicit login rather than `@me` keeps the query unambiguous and readable in logs.
       `review-requested:${params.login}`,
       ...(params.repo ? [`repo:${params.repo.owner}/${params.repo.repo}`] : []),
     ];
@@ -300,6 +311,7 @@ export class OctokitGitHubClient implements GitHubClient {
       return {
         totalCount: data.total_count,
         items: data.items.map((item) => {
+          // Search results have no owner/repo fields; derive them from ".../repos/{owner}/{repo}".
           const [owner = '', repo = ''] = item.repository_url.split('/').slice(-2);
           return {
             ref: { owner, repo, number: item.number },

@@ -17,6 +17,7 @@ export async function runTool<T extends object>(
   toolName: string,
   body: () => Promise<T>,
 ): Promise<CallToolResult> {
+  // performance.now() is monotonic: durations stay correct even if the system clock changes.
   const startedAt = performance.now();
   try {
     const structured = await body();
@@ -25,11 +26,14 @@ export async function runTool<T extends object>(
       'tool succeeded',
     );
     return {
+      // The cast is safe: tools return plain objects, and the SDK re-validates them against the
+      // tool's outputSchema before anything reaches the client.
       structuredContent: structured as Record<string, unknown>,
       content: [{ type: 'text', text: JSON.stringify(structured) }],
     };
   } catch (error) {
     const ms = Math.round(performance.now() - startedAt);
+    // warn, not error: bad input or a 404 is an expected outcome, not a fault in this server.
     if (error instanceof DevflowError) {
       logger.warn({ tool: toolName, ms, code: error.code, err: error }, 'tool failed');
       return errorResult(`[${error.code}] ${error.message}`);

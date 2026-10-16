@@ -1,5 +1,6 @@
 /**
- * Minimal glob → RegExp conversion for path matching (no dependency needed).
+ * Minimal glob → RegExp conversion for path matching. Written in-house rather than adding a
+ * dependency (see Decisions.md D21): the needed subset is about 20 lines.
  *
  * Supported syntax:
  *   `**`  any number of path segments (including none)

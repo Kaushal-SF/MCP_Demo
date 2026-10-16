@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const;
 
+// Env vars are flat strings, so lists are comma-separated. Blank items are dropped, which makes
+// trailing commas and extra spaces harmless.
 const commaList = z
   .string()
   .optional()
@@ -15,6 +17,7 @@ const commaList = z
 const EnvSchema = z.object({
   GITHUB_TOKEN: z
     .string({ error: 'GITHUB_TOKEN is required' })
+    // Tokens pasted into config files often pick up a trailing newline, which GitHub rejects (401).
     .trim()
     .min(1, 'GITHUB_TOKEN is required'),
   GITHUB_API_URL: z.url({ error: 'GITHUB_API_URL must be a valid URL' }).optional(),
@@ -45,6 +48,7 @@ export class ConfigError extends Error {
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = EnvSchema.safeParse(env);
+  // Report every problem at once so users can fix their configuration in a single pass.
   if (!parsed.success) {
     const problems = parsed.error.issues.map((issue) => `  - ${issue.message}`).join('\n');
     throw new ConfigError(`Invalid configuration:\n${problems}\nSee .env.example for details.`);

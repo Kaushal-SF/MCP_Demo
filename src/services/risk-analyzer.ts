@@ -25,6 +25,11 @@ export const DEFAULT_SENSITIVE_PATHS = [
   '**/helm/**',
 ] as const;
 
+/**
+ * Size thresholds follow widely cited code-review research (e.g. the SmartBear/Cisco study):
+ * reviewers find defects reliably up to roughly 200–400 lines; beyond that, effectiveness drops.
+ * All values are starting points to calibrate against real team PRs (Sub-goal 3).
+ */
 export const THRESHOLDS = {
   largeChangeLines: 400,
   veryLargeChangeLines: 1000,
@@ -99,6 +104,13 @@ function listFiles(files: ChangedFile[]): string[] {
 /**
  * Pure, deterministic heuristics over PR metadata. No API calls, so it is fast and easy to test.
  * Each signal explains itself; the score is just the capped sum of signal weights.
+ *
+ * Weights are balanced so that:
+ *   - one strong concern alone (sensitive path 25, failing CI 25, very large 30) → medium
+ *   - two strong concerns together (≥ 50) → high
+ *   - hygiene issues alone (short description 10, lockfile-only 5) → stay low
+ *   - info signals (weight 0) add context for the model without moving the score.
+ * Why heuristics instead of asking an LLM: see Decisions.md D12.
  */
 export function analyzeRisk(input: RiskInput, options: RiskOptions = {}): RiskReport {
   const { pr, files, checks } = input;
@@ -107,6 +119,8 @@ export function analyzeRisk(input: RiskInput, options: RiskOptions = {}): RiskRe
   const sourceFiles = files.filter((file) => isSourceFile(file.path));
   const testFiles = files.filter((file) => isTestFile(file.path));
   const generatedFiles = files.filter((file) => isGenerated(file.path));
+  // Lockfiles and generated files are excluded: a 5,000-line package-lock.json diff is not
+  // 5,000 lines anyone actually reviews.
   const reviewable = files.filter((file) => !isGenerated(file.path));
   const reviewableLines = reviewable.reduce((sum, file) => sum + changed(file), 0);
 
@@ -155,6 +169,7 @@ export function analyzeRisk(input: RiskInput, options: RiskOptions = {}): RiskRe
   }
 
   // --- Tests ----------------------------------------------------------------
+  // Only additions count: deleting code without touching tests is common and usually fine.
   const sourceAdditions = sourceFiles.reduce((sum, file) => sum + file.additions, 0);
   if (sourceAdditions > 0 && testFiles.length === 0) {
     signals.push({
@@ -195,6 +210,7 @@ export function analyzeRisk(input: RiskInput, options: RiskOptions = {}): RiskRe
       files: listFiles(manifests),
     });
   } else if (lockfiles.length > 0) {
+    // Only when no manifest changed: a manifest change already explains the lockfile.
     signals.push({
       id: 'LOCKFILE_WITHOUT_MANIFEST',
       severity: 'low',
@@ -256,6 +272,7 @@ export function analyzeRisk(input: RiskInput, options: RiskOptions = {}): RiskRe
   );
   const level: RiskLevel = score >= 50 ? 'high' : score >= 20 ? 'medium' : 'low';
 
+  // Biggest source changes first: that is where most of the review effort (and risk) usually is.
   const focusFiles = [...sourceFiles]
     .sort((a, b) => changed(b) - changed(a))
     .slice(0, 5)

@@ -54,6 +54,7 @@ export async function listReviewQueue(
 ): Promise<ReviewQueue> {
   const { page, perPage } = decodeCursor(options.cursor, options.limit);
   const now = options.now ?? new Date();
+  // Search needs an explicit login. The client caches it, so this costs one API call per process.
   const login = await github.getAuthenticatedLogin();
 
   const result = await github.searchReviewRequests({
@@ -63,6 +64,9 @@ export async function listReviewQueue(
     perPage,
   });
 
+  // Search results carry no line counts, so each item needs one pulls.get call (an N+1 pattern).
+  // Acceptable because N is capped at 30 and the calls run in parallel, well within GitHub's
+  // 5,000 requests/hour budget.
   const items = await Promise.all(
     result.items.map(async (item): Promise<ReviewQueueItem> => {
       const ageDays = Math.floor((now.getTime() - new Date(item.createdAt).getTime()) / DAY_MS);
@@ -85,6 +89,8 @@ export async function listReviewQueue(
     }),
   );
 
+  // There is another page only if this one was full AND we have not reached the real total or the
+  // 1000-result search cap (GitHub returns 422 for pages past it).
   const seen = (page - 1) * perPage + result.items.length;
   const hasMore =
     result.items.length === perPage && seen < Math.min(result.totalCount, SEARCH_RESULT_CAP);

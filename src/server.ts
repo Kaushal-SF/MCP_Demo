@@ -6,6 +6,8 @@ import { registerGetPrContext } from './tools/get-pr-context.js';
 import { registerListReviewQueue } from './tools/list-review-queue.js';
 
 export const SERVER_NAME = 'devflow-mcp';
+// Read from package.json (inlined by tsup at build time) so the version reported in the MCP
+// handshake can never drift from the published package version.
 export const SERVER_VERSION = pkg.version;
 
 /** Sent to clients at initialization; many hosts add it to the model's system prompt. */
@@ -21,13 +23,17 @@ const INSTRUCTIONS = `DevFlow gives you GitHub pull-request context for code rev
  */
 export function createServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
+    // `name` is a stable machine identifier; `title` is the human-friendly display name hosts show.
     { name: SERVER_NAME, title: 'DevFlow MCP', version: SERVER_VERSION },
     {
       instructions: INSTRUCTIONS,
+      // Declaring `logging` makes the SDK answer `logging/setLevel` from hosts. Forwarding our own
+      // logs as `notifications/message` is planned for M2.
       capabilities: { logging: {} },
     },
   );
 
+  // Registration order is the order hosts see in tools/list; the usual entry point comes first.
   registerGetPrContext(server, ctx);
   registerAnalyzePrRisk(server, ctx);
   registerListReviewQueue(server, ctx);

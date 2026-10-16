@@ -61,6 +61,7 @@ const MANIFESTS = new Set([
   'Podfile',
 ]);
 
+// GitHub file paths always use "/", so node:path is not needed (and would be wrong on Windows).
 function basename(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
 }
@@ -87,6 +88,7 @@ export function isSourceFile(path: string): boolean {
   const dot = name.lastIndexOf('.');
   if (dot <= 0) return false;
   const extension = name.slice(dot + 1).toLowerCase();
+  // Type declarations describe code rather than run it, so they should not trigger "needs tests".
   if (name.endsWith('.d.ts')) return false;
   return SOURCE_EXTENSIONS.has(extension) && !isTestFile(path) && !isGenerated(path);
 }

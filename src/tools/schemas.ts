@@ -11,6 +11,9 @@ import type { ReviewQueue } from '../services/review-queue.js';
  * compiler fail if a domain type drifts away from its published schema.
  */
 
+// `.describe()` text is published inside the JSON Schema. The model reads it to decide how to fill
+// arguments and interpret results, so it is written for the model, not just for developers.
+
 // --- Shared inputs ------------------------------------------------------------
 
 export const prInput = z

@@ -9,7 +9,10 @@ export interface PullRequestRef extends RepoRef {
   number: number;
 }
 
+// GitHub's allowed characters for owner and repository names.
 const NAME = '[A-Za-z0-9_.-]+';
+// Any host, not just github.com, so GitHub Enterprise URLs work. Trailing /files, ?query or #anchor
+// are accepted because people copy URLs from whichever PR tab they are on.
 const URL_PATTERN = new RegExp(`^https?://[^/]+/(${NAME})/(${NAME})/pull/(\\d+)(?:[/?#].*)?$`);
 const SHORT_PATTERN = new RegExp(`^(${NAME})/(${NAME})#(\\d+)$`);
 const REPO_PATTERN = new RegExp(`^(${NAME})/(${NAME})$`);

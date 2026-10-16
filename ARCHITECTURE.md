@@ -1,5 +1,9 @@
 # Architecture
 
+> **Documentation map:** this file covers _structure_ (layers, folders, testing).
+> [Flow.md](Flow.md) traces _execution_ through files and functions.
+> [Decisions.md](Decisions.md) records _why_ each choice was made.
+
 ## Overview
 
 ```
@@ -49,6 +53,9 @@ services or tools.
 
 ## Request lifecycle (`tools/call`)
 
+Summary below; the step-by-step trace with diagrams for every tool and error path is in
+[Flow.md](Flow.md).
+
 1. The host sends `tools/call` with `{ name, arguments }`.
 2. The SDK validates `arguments` against the tool's zod input schema. Invalid input becomes an
    `isError` result before our code runs.
@@ -62,20 +69,16 @@ services or tools.
 
 ## Key decisions
 
-| #   | Decision                                                                       | Why                                                                                                                                                                              |
-| --- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | TypeScript + official `@modelcontextprotocol/sdk` (v1.32, spec `2025-11-25`)   | Most mature SDK, first to get spec features, easy npm distribution.                                                                                                              |
-| D2  | Few, task-shaped tools instead of thin API wrappers                            | `get_pr_context` does in one call what would take 3–4 raw API tools. That means fewer round-trips, fewer tokens and less room for the model to go wrong.                         |
-| D3  | Every tool has an `outputSchema` and returns `structuredContent` + JSON text   | Spec-recommended: typed results for capable hosts, and the serialized JSON fallback for older ones.                                                                              |
-| D4  | Domain types ≠ GitHub API types; compile-time drift checks against zod schemas | Tool outputs stay small and stable even if the GitHub API changes; `SchemaDriftChecks` in `tools/schemas.ts` breaks the build if a domain type and its published schema diverge. |
-| D5  | Tool errors are results (`isError`), not JSON-RPC errors                       | Per spec: lets the model see the problem and self-correct (e.g. fix a malformed PR URL). Protocol errors are reserved for protocol problems.                                     |
-| D6  | Logs → stderr (pino, JSON), `no-console` lint rule                             | In stdio mode stdout _is_ the protocol stream. A stray `console.log` would corrupt it.                                                                                           |
-| D7  | CI status is best-effort in `get_pr_context`                                   | A token without _Checks_ permission should still get PR and file context; the gap is reported in `checksError`.                                                                  |
-| D8  | Risk analysis is deterministic heuristics, not an LLM call                     | Fast, free, explainable and testable. The host's model does the judgement; we supply facts and signals.                                                                          |
-| D9  | Opaque base64url cursors carrying page + page size                             | Spec recommends opaque cursors. Storing page size prevents skipped or duplicated items if `limit` changes between calls.                                                         |
-| D10 | Untrusted-content hygiene: instructions + field descriptions + body truncation | PR text is attacker-controllable. We cannot stop prompt injection server-side, but we label the data clearly and keep it bounded.                                                |
-| D11 | Ports & adapters (`GitHubClient` interface)                                    | Testability (fake client) and room for future trackers (Jira/Linear deferred by choice).                                                                                         |
-| D12 | Node ≥ 22                                                                      | Node 20 reached end-of-life in April 2026.                                                                                                                                       |
+Every significant choice, with the alternatives considered, the reasoning and the trade-offs, is
+recorded in **[Decisions.md](Decisions.md)** (D1–D24). Highlights:
+
+- Few task-shaped tools instead of API wrappers (D4)
+- Structured output with drift-checked schemas (D6, D7)
+- Failures as `isError` results with codes (D8)
+- Ports & adapters for GitHub (D9)
+- Deterministic risk heuristics (D12)
+- Untrusted-content handling (D13)
+- stderr-only logging (D14)
 
 ## Testing strategy
 

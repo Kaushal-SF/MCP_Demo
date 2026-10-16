@@ -14,6 +14,8 @@ export function createLogger(level: LogLevel = 'info'): Logger {
     {
       name: 'devflow-mcp',
       level,
+      // Defence in depth: we never log tokens on purpose, but redaction catches an accidental
+      // log of a config or request object.
       redact: {
         paths: ['token', '*.token', 'authorization', '*.authorization', 'headers.authorization'],
         censor: '[redacted]',

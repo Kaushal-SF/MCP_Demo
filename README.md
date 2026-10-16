@@ -128,7 +128,15 @@ npm run inspect        # build and open the MCP Inspector against the server
 GITHUB_TOKEN=$(gh auth token) npm run smoke -- owner/repo#123   # live end-to-end check
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for how the code is organised and why.
+Project documentation:
+
+| Document                           | Read it to learn                                                             |
+| ---------------------------------- | ---------------------------------------------------------------------------- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | How the code is organised: layers, folders, testing strategy                 |
+| [Flow.md](Flow.md)                 | How execution travels across files and functions, including every error path |
+| [Decisions.md](Decisions.md)       | Why each choice was made: alternatives, trade-offs, when to revisit          |
+| [PROGRESS.md](PROGRESS.md)         | What has been built so far, how it was verified, and what's next             |
+| [CHANGELOG.md](CHANGELOG.md)       | Released changes by version                                                  |
 
 ## License
 

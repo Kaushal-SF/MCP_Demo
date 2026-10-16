@@ -1,3 +1,10 @@
+/**
+ * Entry point and composition root.
+ *
+ * This is the only file that knows about concrete implementations (Octokit, pino, stdio).
+ * Everything below it receives its dependencies as arguments, which is what lets tests swap in
+ * a fake GitHub client and an in-memory transport. See Flow.md § 1 for the startup sequence.
+ */
 import { parseArgs } from 'node:util';
 import { OctokitGitHubClient } from './clients/github.js';
 import { ConfigError, loadConfig } from './config.js';
@@ -21,6 +28,7 @@ function print(message: string): void {
 async function main(): Promise<void> {
   const { values } = parseArgs({
     options: {
+      // The env fallback lets container deployments pick a transport without changing the command.
       transport: { type: 'string', default: process.env.DEVFLOW_TRANSPORT ?? 'stdio' },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'v', default: false },
@@ -40,10 +48,12 @@ async function main(): Promise<void> {
     print(
       `Unsupported transport "${values.transport}". Only "stdio" is available in this version.`,
     );
+    // exitCode (not exit()) lets the stderr write above flush; 2 is the Unix "usage error" code.
     process.exitCode = 2;
     return;
   }
 
+  // Config first: it decides the log level, and a bad config must stop us before anything starts.
   const config = loadConfig();
   const logger = createLogger(config.logLevel);
   const github = new OctokitGitHubClient({
@@ -60,6 +70,7 @@ async function main(): Promise<void> {
   await startStdio(server, logger);
 }
 
+// Exit non-zero so the MCP host marks the server as failed instead of waiting on a dead process.
 main().catch((error: unknown) => {
   print(error instanceof ConfigError ? error.message : `Fatal: ${String(error)}`);
   process.exit(1);

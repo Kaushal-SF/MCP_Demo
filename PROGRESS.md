@@ -5,12 +5,12 @@ Each milestone ends with verification, an update to this file, and a git commit.
 
 ## Goal → milestone map
 
-| Sub-goal                                            | Covered by                                                                         | Status         |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------- |
-| 1. Understand MCP fundamentals & architecture       | Design work + [ARCHITECTURE.md](ARCHITECTURE.md), learning notes in each milestone | 🟡 In progress |
-| 2. Practical MCP server implementation & deployment | Milestones 1–5 below                                                               | 🟡 In progress |
-| 3. Integrate MCP with real workflow                 | Daily use in Claude Code / VS Code after M2; feedback round                        | ⚪ Not started |
-| 4. Reinforcement & validation                       | Security review, evals, metrics, demo                                              | ⚪ Not started |
+| Sub-goal                                            | Covered by                                                                                                             | Status         |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------- |
+| 1. Understand MCP fundamentals & architecture       | [ARCHITECTURE.md](ARCHITECTURE.md), [Flow.md](Flow.md), [Decisions.md](Decisions.md), learning notes in each milestone | 🟡 In progress |
+| 2. Practical MCP server implementation & deployment | Milestones 1–5 below                                                                                                   | 🟡 In progress |
+| 3. Integrate MCP with real workflow                 | Daily use in Claude Code / VS Code after M2; feedback round                                                            | ⚪ Not started |
+| 4. Reinforcement & validation                       | Security review, evals, metrics, demo                                                                                  | ⚪ Not started |
 
 ## Milestones (Sub-goal 2)
 
@@ -49,7 +49,7 @@ Each milestone ends with verification, an update to this file, and a git commit.
 - **Server:** identity + title, `instructions` for the model (including the untrusted-content
   warning), `logging` capability, graceful shutdown on SIGINT/SIGTERM/stdin close.
 - **Docs:** README (setup for Claude Code / Desktop / VS Code, config, security), ARCHITECTURE
-  (layers, request lifecycle, 12 key decisions, testing strategy), this log, CHANGELOG, LICENSE.
+  (layers, request lifecycle, testing strategy), this log, CHANGELOG, LICENSE.
 - **Tooling:** `npm run smoke` (live stdio end-to-end check), `npm run inspect` (MCP Inspector).
 
 ### Verification results
@@ -97,6 +97,24 @@ npm ci && npm run build
 GITHUB_TOKEN=$(gh auth token) npm run smoke -- owner/repo#123
 claude mcp add devflow --env GITHUB_TOKEN=$(gh auth token) -- node "$PWD/dist/index.js"
 ```
+
+---
+
+## Docs & code-clarity pass (2026-10-16)
+
+Requested after M1 review: record _why_, not just _what_, and make execution easy to follow.
+
+- **[Decisions.md](Decisions.md):** 24 decision records (context → options → decision → why →
+  trade-offs → revisit when), with an index and rules for adding or superseding entries. It
+  replaces the short decisions table that used to live in ARCHITECTURE.md.
+- **[Flow.md](Flow.md):** startup, handshake, the shared `tools/call` pipeline, a trace for each
+  tool, 10 error paths, shutdown, test wiring, API calls per tool, and a caller/callee function
+  index. All 7 Mermaid diagrams were validated with the Mermaid parser.
+- **Explicit comments:** 48 _why_-comments added across 18 source files. They explain ordering,
+  limits, caching, weights, error choices and N+1 trade-offs, and cite Decisions.md IDs where
+  relevant. A misleading comment about Octokit logging to stdout was corrected (it logs to
+  stderr; we silence it for structure, not safety).
+- **Verification:** lint, typecheck and format clean; 102/102 tests passing. No behaviour changes.
 
 ---
 
