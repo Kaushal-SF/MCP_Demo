@@ -28,7 +28,7 @@ const INSTRUCTIONS = `DevFlow gives you GitHub pull-request context for code rev
 
 /**
  * Builds a fully-registered MCP server. Transport-agnostic: the same instance shape is used for
- * stdio, HTTP, and in-memory integration tests.
+ * stdio and the in-memory integration tests.
  */
 export function createServer(ctx: ServerContext): McpServer {
   const server = new McpServer(

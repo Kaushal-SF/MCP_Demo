@@ -7,7 +7,18 @@ export default defineConfig({
   platform: 'node',
   outDir: 'dist',
   clean: true,
-  sourcemap: true,
-  // Makes `dist/index.js` directly executable (`npx devflow-mcp`).
-  banner: { js: '#!/usr/bin/env node' },
+  // Bundle every dependency into one file, so `npx devflow-pr-mcp` and the Claude Desktop bundle
+  // start without installing anything. That is why the runtime libraries are devDependencies.
+  // See Decisions.md D37.
+  noExternal: [/.*/],
+  banner: {
+    js: [
+      // Makes `dist/index.js` directly executable.
+      '#!/usr/bin/env node',
+      // Some bundled libraries are CommonJS and call require() for Node built-ins, which an ES module
+      // does not have; give them one.
+      "import { createRequire as __devflowCreateRequire } from 'node:module';",
+      'const require = __devflowCreateRequire(import.meta.url);',
+    ].join('\n'),
+  },
 });

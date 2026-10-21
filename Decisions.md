@@ -22,9 +22,9 @@ through the code is described in [Flow.md](Flow.md), and the structure in
 | ---------------------------------------------------------------- | ---------------------------------------------------- | ----------- | ------------ |
 | [D1](#d1-solve-pull-request-review-friction)                     | Solve pull-request review friction                   | ✅ Accepted | Product      |
 | [D2](#d2-typescript-with-the-official-mcp-sdk)                   | TypeScript with the official MCP SDK                 | ✅ Accepted | Platform     |
-| [D3](#d3-stdio-first-remote-http-later)                          | stdio first, remote HTTP later                       | ✅ Accepted | Transport    |
+| [D3](#d3-stdio-first-remote-http-later)                          | stdio first, remote HTTP later                       | 🔁 By D35   | Transport    |
 | [D4](#d4-few-task-shaped-tools-not-api-wrappers)                 | Few task-shaped tools, not API wrappers              | ✅ Accepted | Tool design  |
-| [D5](#d5-read-only-first-writes-behind-a-flag)                   | Read-only first, writes behind a flag                | ✅ Accepted | Safety       |
+| [D5](#d5-read-only-first-writes-behind-a-flag)                   | Read-only first, writes behind a flag                | 🔁 By D35   | Safety       |
 | [D6](#d6-structured-output-plus-json-text)                       | Structured output plus JSON text                     | ✅ Accepted | Tool design  |
 | [D7](#d7-our-own-domain-types-with-drift-checks)                 | Our own domain types, with drift checks              | ✅ Accepted | Code design  |
 | [D8](#d8-failures-are-tool-results-with-error-codes)             | Failures are tool results with error codes           | ✅ Accepted | Errors       |
@@ -54,6 +54,10 @@ through the code is described in [Flow.md](Flow.md), and the structure in
 | [D32](#d32-resource-and-prompt-failures-are-json-rpc-errors)     | Resource and prompt failures are JSON-RPC errors     | ✅ Accepted | Errors       |
 | [D33](#d33-probe-guideline-paths-in-parallel)                    | Probe guideline paths in parallel                    | ✅ Accepted | Integration  |
 | [D34](#d34-parse-every-tool-result-through-its-output-schema)    | Parse every tool result through its output schema    | ✅ Accepted | Errors       |
+| [D35](#d35-a-simple-local-read-only-v1)                          | A simple, local, read-only v1                        | ✅ Accepted | Scope        |
+| [D36](#d36-use-the-github-cli-login-when-no-token-is-set)        | Use the GitHub CLI login when no token is set        | ✅ Accepted | Setup        |
+| [D37](#d37-one-self-contained-file)                              | One self-contained file                              | ✅ Accepted | Delivery     |
+| [D38](#d38-one-click-install-for-claude-desktop)                 | One-click install for Claude Desktop                 | ✅ Accepted | Delivery     |
 
 ---
 
@@ -94,7 +98,7 @@ through the code is described in [Flow.md](Flow.md), and the structure in
 
 ## D3. stdio first, remote HTTP later
 
-- **Status:** ✅ Accepted · 2026-10-15 · both transports chosen by the project owner; order decided during planning
+- **Status:** 🔁 Superseded by D35 (2026-10-21): remote HTTP dropped · 2026-10-15 · both transports chosen by the project owner; order decided during planning
 - **Context:** MCP defines two transports: stdio (the host starts the server as a child process)
   and Streamable HTTP (a remote server). The owner wants both.
 - **Decision:** Ship stdio in M1. Add Streamable HTTP with OAuth in M4.
@@ -127,7 +131,7 @@ through the code is described in [Flow.md](Flow.md), and the structure in
 
 ## D5. Read-only first, writes behind a flag
 
-- **Status:** ✅ Accepted · 2026-10-14
+- **Status:** 🔁 Superseded by D35 (2026-10-21): the write tool was dropped; read-only stays · 2026-10-14
 - **Context:** Posting review comments is useful, but a write tool is where mistakes become
   visible to other people.
 - **Decision:** M1 has read-only tools only, all annotated `readOnlyHint: true`. The
@@ -400,7 +404,7 @@ message`. Anything unexpected becomes a generic `[INTERNAL]` message, with full 
   (`Fixes #12`) instead.
 - **Why:** Focus on a complete, polished GitHub experience first. The ports-and-adapters design
   (D9) keeps Jira a later, additive change.
-- **Revisit when:** After M5, or sooner if the team's workflow requires ticket context.
+- **Revisit when:** After v1.0 has been in daily use, or sooner if the team's workflow requires ticket context.
 
 ## D23. Milestone-by-milestone delivery
 
@@ -604,3 +608,82 @@ _Entries D25–D34 were added in Milestone 2 (2026-10-21)._
 - **Trade-offs:** One extra parse per call (microseconds). A field we forget to declare is silently
   dropped instead of failing loudly, but the integration tests check the fields that matter.
 - **Revisit when:** Never in principle.
+
+## D35. A simple, local, read-only v1
+
+- **Status:** ✅ Accepted · 2026-10-21 · decided by the project owner ("one simple and complete
+  application that I can easily present and demo; others can use it with minimal effort")
+- **Context:** After M2 the plan still had three milestones: a write tool with elicitation (M3),
+  remote HTTP with OAuth, Docker and cloud hosting (M4), and release engineering with Changesets
+  and a registry listing (M5). The owner's real goal is a product that is easy to present and that
+  colleagues can adopt in minutes.
+- **Options:** (a) keep the plan; (b) ship what exists as v1.0, cut what adds setup or risk, and
+  spend the effort on installation instead.
+- **Decision:** (b). v1.0 is the six read-only tools, two resources and three prompts, running
+  locally over stdio. Dropped: `post_review_comment` (M3) and the remote deployment (M4). Kept
+  from M5: a 1.0.0 version that is ready to publish to npm, without Changesets or a registry
+  listing. Added instead: zero-config sign-in (D36), a single-file build (D37) and a Claude
+  Desktop installer (D38).
+- **Why:**
+  - **Read-only is a selling point.** "It can't change anything on GitHub" makes it easy for others
+    to try and easy to approve. A write tool needs write-scoped tokens, confirmation flows and audit
+    logs, and the model already drafts the comment for you to paste.
+  - **Remote hosting adds the most work and the most setup.** An OAuth server, a domain and hosting
+    costs are a lot to take on for a tool where every user's token already lives on their own laptop.
+  - **What others feel is installation.** One command, or a double-click, does more for adoption than
+    more features.
+- **Trade-offs:** No hosted, shared instance. Reviews are posted by hand. The protocol topics M3
+  and M4 would have taught (elicitation, OAuth for MCP) are left for study rather than shipped.
+- **Revisit when:** Teammates ask for posting comments from the chat, or the team needs a central
+  server (for example, for people who cannot run Node locally).
+
+## D36. Use the GitHub CLI login when no token is set
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** Creating a token, choosing its permissions and pasting it into a config file was the
+  hardest setup step. Most developers who review PRs already have the GitHub CLI signed in.
+- **Decision:** `GITHUB_TOKEN` becomes optional. Without it, `resolveGitHubToken()` runs
+  `gh auth token` (for `--hostname` on GitHub Enterprise), trying `gh` on the PATH and then its
+  usual install locations. If neither works, startup fails with a message naming both ways to fix
+  it.
+- **Why:**
+  - Zero setup for most users, and the token never has to be written into any file.
+  - The same approach is used by many developer tools, so it is familiar.
+  - Desktop apps start servers with a minimal PATH, so the known install paths matter.
+- **Trade-offs:** A `gh` token usually has wider scopes than a hand-made read-only token. DevFlow
+  only ever reads, but a cautious user can still set `GITHUB_TOKEN` to a fine-grained read-only
+  token. Startup can spend up to a few seconds trying the CLI when it is missing.
+- **Revisit when:** A host offers a standard way to hand a server a GitHub identity.
+
+## D37. One self-contained file
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** `npx` installs a package's dependencies before running it (Octokit, the MCP SDK,
+  pino, zod and their dependencies), which makes the first start slow. The Claude Desktop bundle
+  would also have needed a `node_modules` folder.
+- **Decision:** tsup bundles every dependency into `dist/index.js` (`noExternal`). The runtime
+  libraries move to `devDependencies`, so the published package has no dependencies at all. A
+  `createRequire` banner gives bundled CommonJS code a `require` for Node built-ins.
+- **Why:** Faster first start, identical code in every install, nothing to resolve at runtime, and
+  the same file serves npm, the Desktop bundle and running from source.
+- **Trade-offs:** The file is about 1.7 MB, and a security fix in a dependency needs a new DevFlow
+  release instead of a reinstall. That is the usual trade-off for bundled command-line tools.
+- **Revisit when:** The bundle causes a compatibility problem, or the package grows large enough
+  that its size matters.
+
+## D38. One-click install for Claude Desktop
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** Claude Desktop users configure servers by editing a JSON file with absolute paths,
+  which is error-prone and hard to demo.
+- **Decision:** Ship an MCP Bundle (`build/devflow.mcpb`, built by `npm run bundle`) with a
+  `manifest.json`. Double-clicking it installs DevFlow, and Claude Desktop shows an optional
+  field for a GitHub token (blank means "use the GitHub CLI login"). The packaging tool runs through
+  `npx` at a pinned version instead of being a project dependency.
+- **Why:** It is the standard installer format for Claude Desktop, it needs no terminal at all,
+  and the file can be shared in a chat message.
+- **Trade-offs:** One more build artifact to keep in step. The manifest's version is copied from
+  `package.json` at build time to prevent drift. Keeping the packaging tool out of the project
+  also keeps its dependencies out of `npm audit`.
+- **Revisit when:** The bundle format changes, or the project is published to a registry that
+  Claude Desktop installs from directly.

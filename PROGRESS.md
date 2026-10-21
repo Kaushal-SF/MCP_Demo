@@ -5,25 +5,30 @@ Each milestone ends with verification, an update to this file, and a git commit.
 
 ## Goal → milestone map
 
-| Sub-goal                                            | Covered by                                                                                                             | Status                      |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| 1. Understand MCP fundamentals & architecture       | [ARCHITECTURE.md](ARCHITECTURE.md), [Flow.md](Flow.md), [Decisions.md](Decisions.md), learning notes in each milestone | 🟡 In progress              |
-| 2. Practical MCP server implementation & deployment | Milestones 1–5 below                                                                                                   | 🟡 In progress              |
-| 3. Integrate MCP with real workflow                 | Daily use in Claude Code / VS Code after M2; feedback round                                                            | 🟢 Ready to start (M2 done) |
-| 4. Reinforcement & validation                       | Security review, evals, metrics, demo                                                                                  | ⚪ Not started              |
+| Sub-goal                                            | Covered by                                                                                                             | Status                              |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| 1. Understand MCP fundamentals & architecture       | [ARCHITECTURE.md](ARCHITECTURE.md), [Flow.md](Flow.md), [Decisions.md](Decisions.md), learning notes in each milestone | 🟡 In progress                      |
+| 2. Practical MCP server implementation & deployment | M1–M3 below: v1.0.0, packaged for npm and Claude Desktop                                                               | ✅ Done (publishing is one command) |
+| 3. Integrate MCP with real workflow                 | Daily use on real PRs, a real release, stand-ups; teammates install it                                                 | 🟢 Ready to start                   |
+| 4. Reinforcement & validation                       | Present with DEMO.md; short write-up of time saved and feedback                                                        | ⚪ After Sub-goal 3                 |
 
 ## Milestones (Sub-goal 2)
 
-| #   | Milestone                                                                                                                                                                   | Status               |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| M1  | Scaffold, core infrastructure, stdio transport, 3 read-only tools, tests, CI, docs                                                                                          | ✅ Done (2026-10-15) |
-| M2  | Resources (review checklists, repo guidelines), prompts (`review-pr`, `standup-summary`, `release-notes`), `generate_release_notes` tool, argument completions, MCP logging | ✅ Done (2026-10-21) |
-| M3  | `post_review_comment` write tool behind `DEVFLOW_ENABLE_WRITE`, with elicitation-based confirmation                                                                         | ⏭ Next               |
-| M4  | Streamable HTTP transport + OAuth 2.1 resource server, Docker image, cloud deployment, `/healthz`                                                                           | ⚪ Planned           |
-| M5  | Release engineering: Changesets, npm publish, v1.0.0, MCP registry listing                                                                                                  | ⚪ Planned           |
+| #      | Milestone                                                                                                                                                                   | Status                      |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| M1     | Scaffold, core infrastructure, stdio transport, 3 read-only tools, tests, CI, docs                                                                                          | ✅ Done (2026-10-15)        |
+| M2     | Resources (review checklists, repo guidelines), prompts (`review-pr`, `standup-summary`, `release-notes`), `generate_release_notes` tool, argument completions, MCP logging | ✅ Done (2026-10-21)        |
+| M3     | Simplify and ship v1.0: zero-config sign-in, single-file build, Claude Desktop installer, demo script                                                                       | ✅ Done (2026-10-21)        |
+| ~~M4~~ | ~~Streamable HTTP + OAuth, Docker, cloud deployment~~                                                                                                                       | ❌ Dropped (D35)            |
+| ~~M5~~ | ~~Changesets, registry listing~~; npm publish kept as a one-command step                                                                                                    | ❌ Dropped / folded into M3 |
 
 > Scope change (2026-10-15): **Jira integration deferred** by decision; GitHub only for now. The
 > `GitHubClient` port leaves room for a `TrackerAdapter` (Jira/Linear) later.
+>
+> Scope change (2026-10-21): the owner asked for **"one simple and complete application"** that is
+> easy to present and that others can use with minimal effort. The write tool (old M3) and the
+> remote deployment (old M4) were dropped; the effort went into installation instead. See
+> [Decisions.md D35](Decisions.md#d35-a-simple-local-read-only-v1).
 
 ---
 
@@ -221,10 +226,91 @@ claude mcp add devflow --env GITHUB_TOKEN=$(gh auth token) -- node "$PWD/dist/in
 
 ---
 
-## Next up: M3 (planned)
+## M3: Simplify and ship v1.0 ✅
 
-- [ ] `post_review_comment` tool, disabled unless `DEVFLOW_ENABLE_WRITE=true`, annotated as non-read-only
-- [ ] Confirmation through MCP elicitation (with a safe fallback for hosts without elicitation)
-- [ ] Least-privilege token guidance for write access; audit logging of every write
-- [ ] Wire it into `/review-pr` as an optional final step ("post this comment?")
-- [ ] Tests, smoke coverage (against a sandbox repo), docs and this log
+**Date:** 2026-10-21 · **Version:** 1.0.0
+
+### Why this milestone changed
+
+After M2 the remaining plan (write tool, OAuth server, Docker, cloud hosting, release tooling) added
+features and setup steps, while the owner's goal is a product that is easy to present and adopt.
+This milestone removes setup instead of adding features. The full reasoning is in D35.
+
+### What was built
+
+- **Zero-config sign-in (D36):** `GITHUB_TOKEN` is optional; DevFlow falls back to
+  `gh auth token`, trying the PATH and the usual install locations (desktop apps start servers with
+  a minimal PATH). If both are missing, the startup error names both fixes.
+- **One self-contained file (D37):** tsup bundles every dependency into `dist/index.js` (1.7 MB).
+  The npm package has no runtime dependencies, so `npx` starts it without installing anything.
+- **Claude Desktop installer (D38):** `manifest.json` + `npm run bundle` → `build/devflow.mcpb`
+  (316 kB). Double-click to install; an optional token field, blank by default.
+- **Package renamed to `devflow-pr-mcp`:** `devflow-mcp` is taken on npm by an unrelated project.
+- **Simplified code:** removed the `--transport` flag and `DEVFLOW_TRANSPORT`.
+- **Docs:** README rewritten around a two-minute install for each host; new [DEMO.md](DEMO.md)
+  (5-minute script, preparation, troubleshooting, common questions); Decisions D35–D38 (D3 and D5
+  marked superseded); Flow.md startup and error paths; ARCHITECTURE build-and-delivery section;
+  CHANGELOG 1.0.0.
+
+### Verification results
+
+| Check                                                   | Result                                                                   |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| lint / typecheck / format                               | ✅ clean                                                                 |
+| `npm test`                                              | ✅ 162 tests (up from 155): token resolution, secondary rate limit       |
+| Coverage                                                | ✅ 97.5% lines, 86.5% branches                                           |
+| Bundled file run alone (no `node_modules` beside it)    | ✅ handshake, checklist read, live `get_my_activity`                     |
+| Live smoke **without `GITHUB_TOKEN`** (token from `gh`) | ✅ all 6 tools, both resources, prompt and completion                    |
+| `npm pack` → `npx` from an empty folder                 | ✅ starts in 1.3 s; 9 files, 317 kB                                      |
+| `.mcpb` manifest validation and unpacked contents       | ✅ valid; 9 files, layout correct                                        |
+| Bad config / no login                                   | ✅ clear startup messages naming the variable or the two ways to sign in |
+
+### Bugs found and fixed
+
+- **Secondary rate limit misreported (found by the live smoke test).** A burst of searches tripped
+  GitHub's secondary limit (403 with `retry-after`, quota still above zero). DevFlow reported
+  `[FORBIDDEN] … the token may lack the required permission`, which would send a user to check token
+  settings for nothing. Now `[RATE_LIMITED] … Wait 60 seconds`, with a regression test.
+- **Invalid `DEVFLOW_LOG_LEVEL` didn't name the variable** (found by a new unit test).
+
+### Learnings (Sub-goal 1)
+
+- **MCP Bundles (`.mcpb`)** are the Claude Desktop install format: a zip with `manifest.json`, the
+  server, and `user_config` fields that Desktop shows as a settings form and passes as env vars.
+- **Desktop apps don't inherit your shell.** A server started by Claude Desktop sees a minimal PATH
+  and none of your shell's variables, so anything found through the shell (like `gh`, or a
+  `GH_TOKEN` exported in `.zshrc`) must be looked up explicitly or configured.
+- **Bundling a stdio server** is the norm for fast `npx` starts; CommonJS dependencies inside an ES
+  module bundle need a `require` provided through `createRequire`.
+
+### Notes for the demo machine
+
+- On this laptop the GitHub CLI is **not** signed in; `gh` works in the terminal only because the
+  shell exports `GH_TOKEN`. Claude Code started from the terminal inherits it, so it works. Claude
+  Desktop does not; run `gh auth login` once, or paste a token into the install dialog.
+- `npm audit` reports one low-severity issue in esbuild (dev-server file read on Windows). It is a
+  build-time tool pinned by tsup, its dev server is never used, and it does not ship in the package.
+
+---
+
+## What's left
+
+The application is complete. What remains is release and real use:
+
+**To release (needs the owner):**
+
+- [ ] Push the commits to `Kaushal-SF/MCP_Demo`.
+- [ ] `npm login`, then `npm publish` (makes `npx -y devflow-pr-mcp` work for everyone).
+- [ ] Attach `build/devflow.mcpb` to a GitHub release, so Desktop users can download it.
+
+**Sub-goal 3: integrate with the real workflow (2–4 weeks of use):**
+
+- [ ] Use `/review-pr` on real trainee PRs for two weeks; note time per review before and after.
+- [ ] Use `/release-notes` for one real release and `/standup-summary` daily.
+- [ ] Have 2–3 teammates install it; collect feedback.
+- [ ] Tune the risk score with real PRs (it counts `docs/` and `scripts/` as production code today).
+
+**Sub-goal 4: reinforcement and validation:**
+
+- [ ] Present it with [DEMO.md](DEMO.md).
+- [ ] Short write-up: time saved, adoption, what users asked for.

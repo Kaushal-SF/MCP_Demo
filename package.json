@@ -1,9 +1,15 @@
 {
-  "name": "devflow-mcp",
-  "version": "0.2.0",
-  "description": "MCP server that gives AI assistants pull-request and dev-workflow context (GitHub first).",
+  "name": "devflow-pr-mcp",
+  "version": "1.0.0",
+  "description": "Pull-request review assistant for Claude and other AI tools: PR context, risk, diffs, checklists, stand-ups and release notes. Read-only, runs locally.",
   "type": "module",
   "license": "MIT",
+  "author": "Kaushal-SF",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kaushal-SF/MCP_Demo.git"
+  },
+  "homepage": "https://github.com/Kaushal-SF/MCP_Demo#readme",
   "bin": {
     "devflow-mcp": "dist/index.js"
   },
@@ -26,27 +32,27 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "inspect": "npm run build && npx @modelcontextprotocol/inspector node dist/index.js",
-    "smoke": "tsx scripts/smoke.ts"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.1",
-    "@octokit/rest": "^22.0.1",
-    "pino": "^10.4.0",
-    "zod": "^4.6.7"
+    "smoke": "tsx scripts/smoke.ts",
+    "bundle": "npm run build && tsx scripts/bundle.ts",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@octokit/rest": "^22.0.1",
     "@types/node": "^26.6.5",
     "@vitest/coverage-v8": "^5.0.4",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "msw": "^3.0.3",
+    "pino": "^10.4.0",
     "prettier": "^3.9.10",
     "tsup": "^8.5.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.2",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.4",
+    "zod": "^4.6.7"
   },
   "keywords": [
     "mcp",

@@ -4,6 +4,37 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] - 2026-10-21
+
+First complete release: simple to install, simple to demo. See Decisions.md D35–D38.
+
+### Added
+
+- Zero-config sign-in: without `GITHUB_TOKEN`, DevFlow uses the GitHub CLI login (`gh auth token`).
+- One-click Claude Desktop installer (`npm run bundle` → `build/devflow.mcpb`).
+- [DEMO.md](DEMO.md): a 5-minute demo script with preparation, fixes and common questions.
+
+### Changed
+
+- **Package renamed to `devflow-pr-mcp`** (the name `devflow-mcp` is taken on npm). The command is
+  still `devflow-mcp`, and the server name is unchanged.
+- The build is one self-contained file with every dependency bundled, so the package has no
+  runtime dependencies and `npx` starts it without installing anything.
+- `GITHUB_TOKEN` is optional.
+- README rewritten around a two-minute install.
+- Scope: read-only and local by design. The planned write tool and remote HTTP deployment were
+  dropped (D35).
+
+### Removed
+
+- The `--transport` option and `DEVFLOW_TRANSPORT` (stdio is the only transport).
+
+### Fixed
+
+- GitHub's secondary rate limit was reported as `[FORBIDDEN]` ("the token may lack the required
+  permission"); it is now `[RATE_LIMITED]` with how long to wait. (Found by the live smoke test.)
+- An invalid `DEVFLOW_LOG_LEVEL` now names the variable in the startup error.
+
 ## [0.2.0] - 2026-10-21
 
 ### Added

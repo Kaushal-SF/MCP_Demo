@@ -2,7 +2,7 @@
  * Live smoke test: launches the built server over stdio (exactly as an MCP host would),
  * then calls every tool against the real GitHub API.
  *
- *   GITHUB_TOKEN=... npm run smoke -- <pr> [release-from]
+ *   npm run smoke -- <pr> [release-from]      (uses GITHUB_TOKEN, else your gh login)
  *
  *   <pr>           https://github.com/owner/repo/pull/123 or owner/repo#123
  *   [release-from] previous release tag/date for generate_release_notes (default: 14 days ago)

@@ -8,7 +8,7 @@
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { OctokitGitHubClient } from './clients/github.js';
-import { ConfigError, loadConfig } from './config.js';
+import { ConfigError, loadConfig, resolveGitHubToken } from './config.js';
 import { createLogger } from './lib/logger.js';
 import { McpLogBridge } from './lib/mcp-log-bridge.js';
 import { findPackageRoot } from './lib/package-root.js';
@@ -17,10 +17,12 @@ import { ChecklistStore } from './services/checklists.js';
 import { ReviewQueueSuggestions } from './services/suggestions.js';
 import { startStdio } from './transports/stdio.js';
 
-const USAGE = `Usage: devflow-mcp [--transport stdio] [--help] [--version]
+const USAGE = `Usage: devflow-mcp [--help] [--version]
 
-Environment:
-  GITHUB_TOKEN              (required) GitHub token with read access to pull requests
+Started by an MCP host (Claude Code, Claude Desktop, VS Code, ...), which talks to it over stdio.
+
+Environment (all optional):
+  GITHUB_TOKEN              GitHub token; if unset, the GitHub CLI login (gh auth token) is used
   GITHUB_API_URL            GitHub Enterprise API URL (default: https://api.github.com)
   DEVFLOW_LOG_LEVEL         trace|debug|info|warn|error|fatal|silent (default: info)
   DEVFLOW_SENSITIVE_PATHS   extra comma-separated globs for analyze_pr_risk
@@ -34,8 +36,6 @@ function print(message: string): void {
 async function main(): Promise<void> {
   const { values } = parseArgs({
     options: {
-      // The env fallback lets container deployments pick a transport without changing the command.
-      transport: { type: 'string', default: process.env.DEVFLOW_TRANSPORT ?? 'stdio' },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'v', default: false },
     },
@@ -50,23 +50,16 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (values.transport !== 'stdio') {
-    print(
-      `Unsupported transport "${values.transport}". Only "stdio" is available in this version.`,
-    );
-    // exitCode (not exit()) lets the stderr write above flush; 2 is the Unix "usage error" code.
-    process.exitCode = 2;
-    return;
-  }
-
   // Config first: it decides the log level, and a bad config must stop us before anything starts.
   const config = loadConfig();
   // The bridge exists before the logger so that every log line can also reach the host; it stays
   // silent until attach() below gives it a connected server.
   const logBridge = new McpLogBridge();
   const logger = createLogger(config.logLevel, logBridge.sink);
+  const { token, source } = await resolveGitHubToken(config.github);
+  logger.info({ source }, 'GitHub token resolved');
   const github = new OctokitGitHubClient({
-    token: config.github.token,
+    token,
     apiUrl: config.github.apiUrl,
     userAgent: `${SERVER_NAME}/${SERVER_VERSION}`,
   });

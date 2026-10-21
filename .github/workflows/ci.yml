@@ -34,3 +34,5 @@ jobs:
       - run: npm run build
       - name: Built CLI starts
         run: node dist/index.js --version
+      - name: Claude Desktop installer builds and validates
+        run: npm run bundle

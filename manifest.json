@@ -1,0 +1,61 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/schemas/mcpb-manifest-v0.3.schema.json",
+  "manifest_version": "0.3",
+  "name": "devflow-pr-mcp",
+  "display_name": "DevFlow",
+  "version": "1.0.0",
+  "description": "Pull-request review assistant: PR context, risk, diffs, checklists, stand-ups and release notes. Read-only.",
+  "long_description": "DevFlow gives Claude the context a reviewer gathers by hand: PR details, the diff that matters, CI status, linked issues, a risk score that says where to look first, review checklists, your recent activity for stand-ups, and release notes between two tags. It only reads from GitHub; it never changes anything.\n\nIf you are signed in with the GitHub CLI (`gh auth login`), leave the token field empty.",
+  "author": { "name": "Kaushal-SF", "url": "https://github.com/Kaushal-SF" },
+  "repository": { "type": "git", "url": "https://github.com/Kaushal-SF/MCP_Demo" },
+  "homepage": "https://github.com/Kaushal-SF/MCP_Demo#readme",
+  "license": "MIT",
+  "keywords": ["github", "code-review", "pull-request", "release-notes", "standup"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": { "GITHUB_TOKEN": "${user_config.github_token}" }
+    }
+  },
+  "user_config": {
+    "github_token": {
+      "type": "string",
+      "title": "GitHub token (optional)",
+      "description": "Leave empty if you use the GitHub CLI (gh auth login). Otherwise paste a read-only token.",
+      "sensitive": true,
+      "required": false
+    }
+  },
+  "tools": [
+    {
+      "name": "get_pr_context",
+      "description": "PR details, changed files, CI status and linked issues"
+    },
+    {
+      "name": "analyze_pr_risk",
+      "description": "0–100 risk score with reasons and which files to read first"
+    },
+    {
+      "name": "get_pr_diff",
+      "description": "The code changes for chosen files, within a size budget"
+    },
+    { "name": "list_review_queue", "description": "PRs waiting for your review, oldest first" },
+    {
+      "name": "get_my_activity",
+      "description": "Your merged, in-progress and reviewed PRs for stand-ups"
+    },
+    {
+      "name": "generate_release_notes",
+      "description": "Release notes for PRs merged between two tags or dates"
+    }
+  ],
+  "tools_generated": false,
+  "prompts_generated": true,
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "node": ">=22.0.0" }
+  }
+}

@@ -122,6 +122,31 @@ describe('mapGitHubError', () => {
     expect(error.message).toContain('2027-01-15T08:00:00.000Z');
   });
 
+  // Regression: found by the live smoke test, where a burst of searches tripped GitHub's secondary
+  // limit and the user was told to check their token's permissions.
+  it('reports secondary rate limits as RATE_LIMITED, not as a permission problem', () => {
+    const byHeader = mapGitHubError(
+      {
+        status: 403,
+        response: { headers: { 'retry-after': '60', 'x-ratelimit-remaining': '25' } },
+      },
+      'x',
+    );
+    expect(byHeader.code).toBe('RATE_LIMITED');
+    expect(byHeader.message).toContain('Wait 60 seconds');
+
+    const byMessage = mapGitHubError(
+      {
+        status: 403,
+        message: 'You have exceeded a secondary rate limit.',
+        response: { headers: {} },
+      },
+      'x',
+    );
+    expect(byMessage.code).toBe('RATE_LIMITED');
+    expect(byMessage.message).toContain('Wait a minute');
+  });
+
   it('passes DevflowErrors through and wraps unknown errors as INTERNAL', () => {
     const original = new DevflowError('NOT_FOUND', 'nope');
     expect(mapGitHubError(original, 'x')).toBe(original);

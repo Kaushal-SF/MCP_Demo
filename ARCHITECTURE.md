@@ -8,7 +8,7 @@
 
 ```
  MCP host (Claude Code / Desktop / VS Code)
-        │  JSON-RPC 2.0 over stdio   (Streamable HTTP planned, Milestone 4)
+        │  JSON-RPC 2.0 over stdio   (local only, by design: Decisions.md D35)
         ▼
  ┌──────────────────────────────────────────────────────────────────────┐
  │ transports/   stdio.ts: process wiring, graceful shutdown            │
@@ -53,11 +53,11 @@ services, tools, resources or prompts. Everything a registration needs arrives t
 
 | Path                    | Responsibility                                                                                      |
 | ----------------------- | --------------------------------------------------------------------------------------------------- |
-| `src/index.ts`          | Composition root: parse flags, load config, build dependencies, attach logging, start stdio         |
-| `src/config.ts`         | zod-validated env config; fails fast with a readable message                                        |
+| `src/index.ts`          | Composition root: parse flags, load config, resolve the token, build dependencies, start stdio      |
+| `src/config.ts`         | zod-validated env config; GitHub token from env or the `gh` CLI login (D36)                         |
 | `src/context.ts`        | `ServerContext`: the dependency bundle passed to every registration                                 |
 | `src/server.ts`         | `createServer(ctx)`: transport-agnostic server factory                                              |
-| `src/transports/`       | stdio now; HTTP in M4                                                                               |
+| `src/transports/`       | stdio, the only transport (D35)                                                                     |
 | `src/tools/`            | Tool registrations + `schemas.ts` (input/output schemas, compile-time drift checks)                 |
 | `src/resources/`        | Resource-template registrations (checklists, repo guidelines)                                       |
 | `src/prompts/`          | Prompt registrations with argument completion                                                       |
@@ -68,6 +68,8 @@ services, tools, resources or prompts. Everything a registration needs arrives t
 | `test/unit/`            | Services, lib, log bridge, and the Octokit adapter (against msw-mocked HTTP)                        |
 | `test/integration/`     | Real MCP `Client` ↔ server over `InMemoryTransport`: tools, resources, prompts, completion, logging |
 | `scripts/smoke.ts`      | Live end-to-end check: spawns `dist/index.js` over stdio and exercises every capability             |
+| `scripts/bundle.ts`     | Builds the Claude Desktop installer `build/devflow.mcpb` from `manifest.json` (D38)                 |
+| `manifest.json`         | MCP Bundle manifest: how Claude Desktop starts DevFlow and which settings it asks for               |
 
 ## Request lifecycle (`tools/call`)
 
@@ -88,7 +90,7 @@ Summary below; the step-by-step trace with diagrams for every tool and error pat
 ## Key decisions
 
 Every significant choice, with the alternatives considered, the reasoning and the trade-offs, is
-recorded in **[Decisions.md](Decisions.md)** (D1–D34). Highlights:
+recorded in **[Decisions.md](Decisions.md)** (D1–D38). Highlights:
 
 - Few task-shaped tools instead of API wrappers (D4)
 - Structured output with drift-checked schemas (D6, D7)
@@ -99,6 +101,19 @@ recorded in **[Decisions.md](Decisions.md)** (D1–D34). Highlights:
 - stderr-only logging, bridged to MCP notifications at a host-chosen level (D14, D28)
 - Prompts orchestrate tools rather than pre-fetching (D30)
 - Every tool result is parsed through its own output schema before sending (D34)
+- A simple, local, read-only v1 (D35), zero-config sign-in through the GitHub CLI (D36), one
+  self-contained file (D37) and a one-click Claude Desktop installer (D38)
+
+## Build and delivery
+
+`npm run build` bundles the server and **all** its dependencies into one file, `dist/index.js`
+(D37). The same file is used three ways:
+
+| Channel        | How users get it                              | Built by                     |
+| -------------- | --------------------------------------------- | ---------------------------- |
+| npm            | `npx -y devflow-pr-mcp` (after `npm publish`) | `npm publish` runs the build |
+| Claude Desktop | Double-click `devflow.mcpb`                   | `npm run bundle` → `build/`  |
+| From source    | `node /path/to/dist/index.js`                 | `npm run build`              |
 
 ## Testing strategy
 

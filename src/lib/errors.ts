@@ -57,13 +57,28 @@ export function mapGitHubError(error: unknown, what: string): DevflowError {
     case 401:
       return new DevflowError(
         'UNAUTHORIZED',
-        'GitHub rejected the token (401). Check that GITHUB_TOKEN is set and not expired.',
+        'GitHub rejected the token (401). Check your GitHub CLI login (gh auth status) or, if you set GITHUB_TOKEN, that it is valid and not expired.',
         { cause: error },
       );
     // GitHub signals rate limits with 403 + `x-ratelimit-remaining: 0` (and secondary limits
     // sometimes with 429), so a 403 must be told apart from a real permission problem.
     case 403:
     case 429: {
+      // Secondary ("abuse") limits trip on bursts, e.g. many searches in a minute. They come as a
+      // 403 with `retry-after` and/or a message that says so, and the quota header can still be
+      // above zero, so without this check they were misreported as a permission problem.
+      const retryAfter = Number(headers['retry-after']);
+      if (
+        headers['retry-after'] !== undefined ||
+        /secondary rate limit/i.test(error.message ?? '')
+      ) {
+        const wait = Number.isFinite(retryAfter) ? `${retryAfter} seconds` : 'a minute';
+        return new DevflowError(
+          'RATE_LIMITED',
+          `GitHub is briefly limiting requests after a burst of activity (secondary rate limit). Wait ${wait} and try again.`,
+          { cause: error },
+        );
+      }
       if (headers['x-ratelimit-remaining'] === '0' || error.status === 429) {
         const reset = Number(headers['x-ratelimit-reset']);
         const when = Number.isFinite(reset)
