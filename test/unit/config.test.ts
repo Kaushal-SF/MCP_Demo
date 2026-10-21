@@ -7,6 +7,7 @@ describe('loadConfig', () => {
       github: { token: 'ghp_x', apiUrl: undefined },
       logLevel: 'info',
       extraSensitivePaths: [],
+      checklistsDir: undefined,
     });
   });
 
@@ -16,7 +17,9 @@ describe('loadConfig', () => {
       GITHUB_API_URL: 'https://ghe.corp.io/api/v3',
       DEVFLOW_LOG_LEVEL: 'debug',
       DEVFLOW_SENSITIVE_PATHS: 'src/payments/**, infra/** ,,',
+      DEVFLOW_CHECKLISTS_DIR: '/team/checklists',
     });
+    expect(config.checklistsDir).toBe('/team/checklists');
     expect(config.github).toEqual({ token: 'ghp_x', apiUrl: 'https://ghe.corp.io/api/v3' });
     expect(config.logLevel).toBe('debug');
     expect(config.extraSensitivePaths).toEqual(['src/payments/**', 'infra/**']);

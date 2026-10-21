@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { parsePullRequestRef } from '../lib/pr-ref.js';
 import { runTool } from '../lib/tool-result.js';
 import { getPrContext } from '../services/pr-context.js';
-import type { ToolContext } from './context.js';
+import type { ServerContext } from '../context.js';
 import { PrContextOutputSchema, prInput } from './schemas.js';
 
 /**
@@ -12,7 +12,7 @@ import { PrContextOutputSchema, prInput } from './schemas.js';
  */
 export const MAX_BODY_CHARS = 4000;
 
-export function registerGetPrContext(server: McpServer, ctx: ToolContext): void {
+export function registerGetPrContext(server: McpServer, ctx: ServerContext): void {
   server.registerTool(
     'get_pr_context',
     {
@@ -43,7 +43,7 @@ export function registerGetPrContext(server: McpServer, ctx: ToolContext): void 
       },
     },
     ({ pr, maxFiles }) =>
-      runTool(ctx.logger, 'get_pr_context', async () => {
+      runTool(ctx.logger, 'get_pr_context', PrContextOutputSchema, async () => {
         const context = await getPrContext(ctx.github, parsePullRequestRef(pr), { maxFiles });
         // Truncate here, not in the service: services return complete data and each tool decides
         // how much of it to expose to the model.

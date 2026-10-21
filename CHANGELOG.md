@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-10-21
+
+### Added
+
+- `get_pr_diff` tool: unified-diff patches for chosen paths or globs within a character budget.
+- `get_my_activity` tool: PRs merged, in progress and reviewed over the last N days, plus pending reviews.
+- `generate_release_notes` tool: PRs merged between tags, branches, SHAs or dates, grouped by type,
+  with breaking changes, contributors and ready-to-paste Markdown.
+- Resources: `devflow://checklists/{name}` (bundled `general`, `react`, `node`, `security`
+  checklists, replaceable via `DEVFLOW_CHECKLISTS_DIR`) and `devflow://repos/{owner}/{repo}/guidelines`.
+- Prompts: `/review-pr`, `/standup-summary`, `/release-notes`, with argument completion (the `pr`
+  argument suggests your pending reviews).
+- Server logs are forwarded to hosts as MCP log notifications (default `warning`, honours
+  `logging/setLevel`).
+
+### Changed
+
+- Every tool result is now parsed through its output schema before sending, so undeclared fields
+  are dropped and broken results become `[INTERNAL]` errors.
+- The live smoke script exercises every tool, resource, prompt and completion, and exits non-zero
+  on any failure.
+
+### Fixed
+
+- `list_review_queue` could include fields not declared in its output schema, which strict MCP
+  clients reject. (Found by the live smoke test before release.)
+
 ## [0.1.0] - 2026-10-15
 
 ### Added

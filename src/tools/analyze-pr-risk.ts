@@ -3,13 +3,13 @@ import { parsePullRequestRef } from '../lib/pr-ref.js';
 import { runTool } from '../lib/tool-result.js';
 import { getPrContext } from '../services/pr-context.js';
 import { analyzeRisk } from '../services/risk-analyzer.js';
-import type { ToolContext } from './context.js';
+import type { ServerContext } from '../context.js';
 import { AnalyzePrRiskOutputSchema, prInput } from './schemas.js';
 
 /** Enough for almost every PR; GitHub itself caps the file list at 3000. */
 const MAX_FILES_FOR_ANALYSIS = 1000;
 
-export function registerAnalyzePrRisk(server: McpServer, ctx: ToolContext): void {
+export function registerAnalyzePrRisk(server: McpServer, ctx: ServerContext): void {
   server.registerTool(
     'analyze_pr_risk',
     {
@@ -30,7 +30,7 @@ export function registerAnalyzePrRisk(server: McpServer, ctx: ToolContext): void
       },
     },
     ({ pr }) =>
-      runTool(ctx.logger, 'analyze_pr_risk', async () => {
+      runTool(ctx.logger, 'analyze_pr_risk', AnalyzePrRiskOutputSchema, async () => {
         // Same service as get_pr_context, so both tools always see identical data. The analysis
         // itself is pure and makes no further API calls.
         const context = await getPrContext(ctx.github, parsePullRequestRef(pr), {

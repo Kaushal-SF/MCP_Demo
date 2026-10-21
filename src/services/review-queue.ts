@@ -68,7 +68,18 @@ export async function listReviewQueue(
   // Acceptable because N is capped at 30 and the calls run in parallel, well within GitHub's
   // 5,000 requests/hour budget.
   const items = await Promise.all(
-    result.items.map(async (item): Promise<ReviewQueueItem> => {
+    result.items.map(async (found): Promise<ReviewQueueItem> => {
+      // Copy fields explicitly instead of spreading: the client may return a richer object than
+      // ReviewRequestItem, and extra fields would break the strict published output schema.
+      const item: ReviewRequestItem = {
+        ref: found.ref,
+        url: found.url,
+        title: found.title,
+        author: found.author,
+        draft: found.draft,
+        createdAt: found.createdAt,
+        updatedAt: found.updatedAt,
+      };
       const ageDays = Math.floor((now.getTime() - new Date(item.createdAt).getTime()) / DAY_MS);
       try {
         const pr = await github.getPullRequest(item.ref);

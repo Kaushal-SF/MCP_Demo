@@ -18,32 +18,42 @@ through the code is described in [Flow.md](Flow.md), and the structure in
 
 ## Index
 
-| ID                                                              | Decision                                             | Status      | Area         |
-| --------------------------------------------------------------- | ---------------------------------------------------- | ----------- | ------------ |
-| [D1](#d1-solve-pull-request-review-friction)                    | Solve pull-request review friction                   | ✅ Accepted | Product      |
-| [D2](#d2-typescript-with-the-official-mcp-sdk)                  | TypeScript with the official MCP SDK                 | ✅ Accepted | Platform     |
-| [D3](#d3-stdio-first-remote-http-later)                         | stdio first, remote HTTP later                       | ✅ Accepted | Transport    |
-| [D4](#d4-few-task-shaped-tools-not-api-wrappers)                | Few task-shaped tools, not API wrappers              | ✅ Accepted | Tool design  |
-| [D5](#d5-read-only-first-writes-behind-a-flag)                  | Read-only first, writes behind a flag                | ✅ Accepted | Safety       |
-| [D6](#d6-structured-output-plus-json-text)                      | Structured output plus JSON text                     | ✅ Accepted | Tool design  |
-| [D7](#d7-our-own-domain-types-with-drift-checks)                | Our own domain types, with drift checks              | ✅ Accepted | Code design  |
-| [D8](#d8-failures-are-tool-results-with-error-codes)            | Failures are tool results with error codes           | ✅ Accepted | Errors       |
-| [D9](#d9-ports-and-adapters-for-github)                         | Ports and adapters for GitHub                        | ✅ Accepted | Code design  |
-| [D10](#d10-octokit-rest-not-graphql-or-raw-fetch)               | Octokit REST, not GraphQL or raw fetch               | ✅ Accepted | Integration  |
-| [D11](#d11-ci-status-from-both-systems-best-effort)             | CI status from both systems, best-effort             | ✅ Accepted | Integration  |
-| [D12](#d12-deterministic-heuristics-for-risk-not-an-llm)        | Deterministic heuristics for risk, not an LLM        | ✅ Accepted | Product      |
-| [D13](#d13-label-and-bound-untrusted-content)                   | Label and bound untrusted content                    | ✅ Accepted | Security     |
-| [D14](#d14-json-logs-to-stderr-only)                            | JSON logs to stderr only                             | ✅ Accepted | Operations   |
-| [D15](#d15-configuration-through-env-vars-validated-at-startup) | Configuration through env vars, validated at startup | ✅ Accepted | Operations   |
-| [D16](#d16-opaque-cursors-that-carry-the-page-size)             | Opaque cursors that carry the page size              | ✅ Accepted | Tool design  |
-| [D17](#d17-review-queue-sizes-via-capped-n1-calls)              | Review-queue sizes via capped N+1 calls              | ✅ Accepted | Performance  |
-| [D18](#d18-toolchain-vitest-msw-tsup-strict-eslint)             | Toolchain: Vitest, msw, tsup, strict ESLint          | ✅ Accepted | Tooling      |
-| [D19](#d19-four-layer-testing-including-the-real-protocol)      | Four-layer testing, including the real protocol      | ✅ Accepted | Testing      |
-| [D20](#d20-nodejs-22-or-newer)                                  | Node.js 22 or newer                                  | ✅ Accepted | Platform     |
-| [D21](#d21-in-house-glob-matcher)                               | In-house glob matcher                                | ✅ Accepted | Dependencies |
-| [D22](#d22-jira-integration-deferred)                           | Jira integration deferred                            | ⏸ Deferred  | Scope        |
-| [D23](#d23-milestone-by-milestone-delivery)                     | Milestone-by-milestone delivery                      | ✅ Accepted | Process      |
-| [D24](#d24-services-return-complete-data-tools-shape-it)        | Services return complete data; tools shape it        | ✅ Accepted | Code design  |
+| ID                                                               | Decision                                             | Status      | Area         |
+| ---------------------------------------------------------------- | ---------------------------------------------------- | ----------- | ------------ |
+| [D1](#d1-solve-pull-request-review-friction)                     | Solve pull-request review friction                   | ✅ Accepted | Product      |
+| [D2](#d2-typescript-with-the-official-mcp-sdk)                   | TypeScript with the official MCP SDK                 | ✅ Accepted | Platform     |
+| [D3](#d3-stdio-first-remote-http-later)                          | stdio first, remote HTTP later                       | ✅ Accepted | Transport    |
+| [D4](#d4-few-task-shaped-tools-not-api-wrappers)                 | Few task-shaped tools, not API wrappers              | ✅ Accepted | Tool design  |
+| [D5](#d5-read-only-first-writes-behind-a-flag)                   | Read-only first, writes behind a flag                | ✅ Accepted | Safety       |
+| [D6](#d6-structured-output-plus-json-text)                       | Structured output plus JSON text                     | ✅ Accepted | Tool design  |
+| [D7](#d7-our-own-domain-types-with-drift-checks)                 | Our own domain types, with drift checks              | ✅ Accepted | Code design  |
+| [D8](#d8-failures-are-tool-results-with-error-codes)             | Failures are tool results with error codes           | ✅ Accepted | Errors       |
+| [D9](#d9-ports-and-adapters-for-github)                          | Ports and adapters for GitHub                        | ✅ Accepted | Code design  |
+| [D10](#d10-octokit-rest-not-graphql-or-raw-fetch)                | Octokit REST, not GraphQL or raw fetch               | ✅ Accepted | Integration  |
+| [D11](#d11-ci-status-from-both-systems-best-effort)              | CI status from both systems, best-effort             | ✅ Accepted | Integration  |
+| [D12](#d12-deterministic-heuristics-for-risk-not-an-llm)         | Deterministic heuristics for risk, not an LLM        | ✅ Accepted | Product      |
+| [D13](#d13-label-and-bound-untrusted-content)                    | Label and bound untrusted content                    | ✅ Accepted | Security     |
+| [D14](#d14-json-logs-to-stderr-only)                             | JSON logs to stderr only                             | ✅ Accepted | Operations   |
+| [D15](#d15-configuration-through-env-vars-validated-at-startup)  | Configuration through env vars, validated at startup | ✅ Accepted | Operations   |
+| [D16](#d16-opaque-cursors-that-carry-the-page-size)              | Opaque cursors that carry the page size              | ✅ Accepted | Tool design  |
+| [D17](#d17-review-queue-sizes-via-capped-n1-calls)               | Review-queue sizes via capped N+1 calls              | ✅ Accepted | Performance  |
+| [D18](#d18-toolchain-vitest-msw-tsup-strict-eslint)              | Toolchain: Vitest, msw, tsup, strict ESLint          | ✅ Accepted | Tooling      |
+| [D19](#d19-four-layer-testing-including-the-real-protocol)       | Four-layer testing, including the real protocol      | ✅ Accepted | Testing      |
+| [D20](#d20-nodejs-22-or-newer)                                   | Node.js 22 or newer                                  | ✅ Accepted | Platform     |
+| [D21](#d21-in-house-glob-matcher)                                | In-house glob matcher                                | ✅ Accepted | Dependencies |
+| [D22](#d22-jira-integration-deferred)                            | Jira integration deferred                            | ⏸ Deferred  | Scope        |
+| [D23](#d23-milestone-by-milestone-delivery)                      | Milestone-by-milestone delivery                      | ✅ Accepted | Process      |
+| [D24](#d24-services-return-complete-data-tools-shape-it)         | Services return complete data; tools shape it        | ✅ Accepted | Code design  |
+| [D25](#d25-a-budgeted-diff-tool-for-real-reviews)                | A budgeted diff tool for real reviews                | ✅ Accepted | Tool design  |
+| [D26](#d26-a-data-tool-behind-the-stand-up-prompt)               | A data tool behind the stand-up prompt               | ✅ Accepted | Tool design  |
+| [D27](#d27-checklists-as-markdown-files-replaceable-by-folder)   | Checklists as Markdown files, replaceable by folder  | ✅ Accepted | Product      |
+| [D28](#d28-own-the-mcp-log-level-default-to-warning)             | Own the MCP log level; default to warning            | ✅ Accepted | Operations   |
+| [D29](#d29-release-notes-from-a-merge-time-window)               | Release notes from a merge-time window               | ✅ Accepted | Integration  |
+| [D30](#d30-prompts-orchestrate-tools-and-embed-only-static-text) | Prompts orchestrate tools and embed only static text | ✅ Accepted | Tool design  |
+| [D31](#d31-pr-completion-from-a-cached-review-queue)             | PR completion from a cached review queue             | ✅ Accepted | Performance  |
+| [D32](#d32-resource-and-prompt-failures-are-json-rpc-errors)     | Resource and prompt failures are JSON-RPC errors     | ✅ Accepted | Errors       |
+| [D33](#d33-probe-guideline-paths-in-parallel)                    | Probe guideline paths in parallel                    | ✅ Accepted | Integration  |
+| [D34](#d34-parse-every-tool-result-through-its-output-schema)    | Parse every tool result through its output schema    | ✅ Accepted | Errors       |
 
 ---
 
@@ -415,3 +425,182 @@ message`. Anything unexpected becomes a generic `[INTERNAL]` message, with full 
   - It keeps services reusable across tools, and later across prompts and resources (M2).
 - **Trade-offs:** Each tool must remember to apply its own limits.
 - **Revisit when:** Several tools share the same shaping rules; then extract a helper.
+
+---
+
+_Entries D25–D34 were added in Milestone 2 (2026-10-21)._
+
+## D25. A budgeted diff tool for real reviews
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** M1 tools tell the model _which_ files changed and how much, but never _what_ changed.
+  The `/review-pr` prompt would only produce superficial reviews without the code.
+- **Options considered:** add patches to `get_pr_context`; a separate diff tool; let the host
+  fetch the diff (only works in hosts with a shell, like Claude Code).
+- **Decision:** A separate `get_pr_diff` tool with a character budget (default 20,000, max 80,000).
+  It accepts `paths` as exact paths or globs and skips generated files unless they are named.
+- **Why:**
+  - A full diff can be megabytes. The budget forces "read what matters", and `analyze_pr_risk`
+    already returns `focusFiles`, so the two tools chain naturally.
+  - Keeping it separate keeps `get_pr_context` small for the common "summarise this PR" case (D24).
+  - Truncated or omitted files are reported with a reason, so the model knows what it hasn't seen.
+- **Trade-offs:** One more tool to choose from (6 in total). GitHub omits patches for very large or
+  binary files; those are reported as `no-patch`.
+- **Revisit when:** Models handle far larger contexts cheaply, so the default budget can grow.
+
+## D26. A data tool behind the stand-up prompt
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** The planned `/standup-summary` prompt needs "what did I do recently", and no M1 tool
+  returns that.
+- **Decision:** Add `get_my_activity`: four parallel searches for PRs merged, PRs in progress,
+  PRs reviewed, and the count of pending review requests, over the last N days.
+- **Why:** Prompts should orchestrate tools, not contain data logic (D30). The tool is also useful
+  on its own ("what did I ship this week?").
+- **Trade-offs:** Search cannot filter by _review_ time, so "reviewed" means "reviewed by me and
+  updated in the window". The field description and the prompt both say so, rather than hide it.
+- **Revisit when:** A precise review history is needed. Then use the GraphQL timeline (see D10).
+
+## D27. Checklists as Markdown files, replaceable by folder
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** The checklists must be useful out of the box, and also adaptable to a team's own
+  standards. We asked whether the owner had existing checklists; there was no answer before M2
+  started, so good defaults were needed.
+- **Options considered:** hard-code them in TypeScript; fetch them from a repository; Markdown
+  files in the package, with an override.
+- **Decision:** Four bundled Markdown checklists (`general`, `react`, `node`, `security`) in
+  `checklists/`, served as `devflow://checklists/{name}`. `DEVFLOW_CHECKLISTS_DIR` replaces the
+  folder with a team's own. Files are re-read on every request.
+- **Why:**
+  - Markdown is what reviewers already write, so anyone can edit a checklist without touching code.
+  - Replacing the folder avoids forking the server to change standards.
+  - Re-reading means edits apply immediately, and the files are tiny.
+  - Names are restricted to `[a-z0-9-]` because they become file paths. That prevents path
+    traversal through a crafted URI, which a test verifies.
+- **Trade-offs:** The override replaces the bundled set rather than merging with it. That is simpler
+  to reason about, but a team wanting both must copy the defaults.
+- **Revisit when:** Teams ask for per-repository checklists; then add a repo → checklist mapping.
+
+## D28. Own the MCP log level; default to warning
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** M1 declared the `logging` capability but only wrote to stderr. The SDK keeps the level
+  set by `logging/setLevel` private, and **until a host sets one it forwards every message**.
+- **Decision:** `McpLogBridge` receives every pino line through a log sink, takes over the
+  `logging/setLevel` handler, forwards at `warning` and above by default, and switches to whatever
+  level the host requests.
+- **Why:**
+  - Forwarding an info line per tool call to every host by default would be noise. The spec lets
+    servers choose what to send until the host decides.
+  - The spec says log notifications must not expose internals that could aid an attack, so error
+    objects are reduced to type and message; stack traces stay in stderr.
+  - Logging is fire-and-forget, and failures are swallowed so a log can never cause another log
+    (no loops).
+- **Trade-offs:** We depend on replacing an SDK-registered handler (`setRequestHandler` overwrites),
+  which the integration test exercises against the real SDK.
+- **Revisit when:** The SDK exposes the requested level publicly; then drop our copy of it.
+
+## D29. Release notes from a merge-time window
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** "PRs in this release" can be computed exactly by walking git ancestry between two
+  refs and finding the PR for each commit, or approximately by time.
+- **Options considered:** compare the commits, then look up the PR for each one (one API call per
+  commit); GraphQL; resolve both refs to dates and search `is:merged merged:A..B`.
+- **Decision:** Resolve `from` and `to` (a tag, branch, SHA or date) to instants, then search merged
+  PRs in that window. `base` optionally narrows it to one branch. Grouping uses the
+  conventional-commit prefix first, then labels, then dependency-bot authors.
+- **Why:**
+  - 1–3 searches instead of hundreds of calls, so it stays within rate limits even for large releases.
+  - It matches how teams think about releases ("everything merged since v1.2"), and accepting a
+    plain date covers repos without tags.
+  - The conventional prefix wins over labels because it is the author's own statement of intent.
+- **Trade-offs:** Edge cases such as PRs merged into another branch in the same window, or a tag
+  created later on an old commit. `base` and the explicit dates in the output make this visible.
+  It was verified against real tags (`v2.2.0 → v2.3.0`, 30 PRs).
+- **Revisit when:** Users report misplaced PRs; then add an exact compare-based mode.
+
+## D30. Prompts orchestrate tools and embed only static text
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** A prompt can return a finished bundle of data it fetched on the server, or
+  instructions that make the model call tools itself.
+- **Decision:** Prompts return step-by-step instructions (which tools, in what order, what output
+  shape). The only content embedded is static reference text: the chosen checklist, as an
+  embedded resource in `/review-pr`.
+- **Why:**
+  - The user sees each tool call happen and can steer ("skip the diff, just the risk"), which is
+    the point of an interactive assistant and makes for a better demo.
+  - Live data is fetched once, by the tool designed for it, with its own error handling.
+  - Embedding the checklist saves a round-trip for content that never changes mid-review.
+  - Inputs are validated when the prompt is requested, so a typo fails immediately with a clear
+    message rather than three tool calls later.
+- **Trade-offs:** It depends on the host's model following the steps; all major hosts do this
+  reliably.
+- **Revisit when:** A host without tool support needs the prompts; then add a pre-fetching variant.
+
+## D31. PR completion from a cached review queue
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** Argument completion makes prompts easy to discover. The most useful suggestion for
+  `/review-pr`'s `pr` argument is "the PRs waiting for me".
+- **Decision:** `ReviewQueueSuggestions` caches the first 20 review requests for 60 seconds, shares
+  one in-flight request between keystrokes, and returns `[]` on any failure. `/release-notes`'
+  `repo` argument suggests repositories from the same data.
+- **Why:** Hosts call completion on every keystroke, and GitHub search allows 30 requests a minute.
+  With the cache, at most one search a minute happens. Completion is a convenience, so it must never
+  surface an error in the host's UI.
+- **Trade-offs:** Suggestions can be up to a minute stale.
+- **Revisit when:** Never in principle; tune the TTL if needed.
+
+## D32. Resource and prompt failures are JSON-RPC errors
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** Tools report failures inside a result (`isError`, D8). `resources/read` and
+  `prompts/get` have no such field in the spec.
+- **Decision:** `runRequest()` converts a `DevflowError` into an `McpError`: `INVALID_INPUT` and
+  `NOT_FOUND` become -32602 (Invalid params), other errors -32603. The same `[CODE] message` text is
+  used, and unknown errors get a generic message.
+- **Why:** It is the only spec-compliant channel. -32602 for not-found matches what the SDK already
+  returns for an unknown resource URI, so all "not found" cases look the same to a client. Reusing
+  the message format keeps errors consistent across tools, resources and prompts.
+- **Trade-offs:** The model may not see these errors directly; the host surfaces them to the user.
+- **Revisit when:** The spec adds a dedicated resource-not-found code that the SDK adopts.
+
+## D33. Probe guideline paths in parallel
+
+- **Status:** ✅ Accepted · 2026-10-21
+- **Context:** A repository's CONTRIBUTING guide and PR template can live in several places
+  (root, `.github/`, `docs/`, with different capitalisation).
+- **Decision:** Request all 9 candidate paths in parallel and take the highest-priority hit, in
+  GitHub's own lookup order. A missing file is a normal `null`, not an error. Each document is
+  capped at 8,000 characters.
+- **Why:** One round-trip instead of up to nine sequential ones. The community-profile API could
+  locate the files in one call, but its availability for private repositories was uncertain, so we
+  chose the approach that works everywhere.
+- **Trade-offs:** A few wasted 404 requests per read, well within rate limits. If the repository
+  itself is inaccessible, the result says "not found or not accessible" rather than raising an error.
+- **Revisit when:** Rate-limit pressure appears; then cache per repository.
+
+## D34. Parse every tool result through its output schema
+
+- **Status:** ✅ Accepted · 2026-10-21 · prompted by a bug found in the M2 live smoke test
+- **Context:** After `searchReviewRequests` was rebuilt on the richer general search, the review
+  queue spread `...item` into its output and gained four undeclared fields. The SDK's server-side
+  check ignores unknown keys, but published JSON Schemas say `additionalProperties: false`, so the
+  real SDK **client** rejected `list_review_queue`. Unit tests missed it because the fake client
+  returned the old, narrow shape. Integration tests missed it because the client only validates
+  tools it has listed, and the test never listed them.
+- **Decision:**
+  1. `runTool()` takes the tool's output schema and parses every result with it before sending.
+     Undeclared fields are dropped, and missing or wrong fields become a clean `[INTERNAL]` error.
+  2. The review queue builds items field by field instead of spreading.
+  3. The fake client now returns what the real one returns.
+  4. Integration tests call `tools/list` first, like a real host, so strict client validation runs.
+- **Why:** TypeScript's structural typing allows extra properties, so compile-time drift checks
+  (D7) cannot catch this class of bug. Parsing at the boundary makes it impossible, not just
+  unlikely. Each fix is covered by a regression test.
+- **Trade-offs:** One extra parse per call (microseconds). A field we forget to declare is silently
+  dropped instead of failing loudly, but the integration tests check the fields that matter.
+- **Revisit when:** Never in principle.

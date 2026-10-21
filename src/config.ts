@@ -23,6 +23,7 @@ const EnvSchema = z.object({
   GITHUB_API_URL: z.url({ error: 'GITHUB_API_URL must be a valid URL' }).optional(),
   DEVFLOW_LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   DEVFLOW_SENSITIVE_PATHS: commaList,
+  DEVFLOW_CHECKLISTS_DIR: z.string().trim().min(1).optional(),
 });
 
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -36,6 +37,11 @@ export interface Config {
   logLevel: LogLevel;
   /** Extra glob patterns (on top of the built-in defaults) that analyze_pr_risk flags as sensitive. */
   extraSensitivePaths: string[];
+  /**
+   * Folder of Markdown review checklists. Undefined means the checklists bundled with the package,
+   * so teams can point this at their own folder without forking (see Decisions.md D27).
+   */
+  checklistsDir: string | undefined;
 }
 
 export class ConfigError extends Error {
@@ -59,5 +65,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     github: { token: data.GITHUB_TOKEN, apiUrl: data.GITHUB_API_URL },
     logLevel: data.DEVFLOW_LOG_LEVEL,
     extraSensitivePaths: data.DEVFLOW_SENSITIVE_PATHS,
+    checklistsDir: data.DEVFLOW_CHECKLISTS_DIR,
   };
 }

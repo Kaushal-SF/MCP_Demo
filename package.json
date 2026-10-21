@@ -1,6 +1,6 @@
 {
   "name": "devflow-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server that gives AI assistants pull-request and dev-workflow context (GitHub first).",
   "type": "module",
   "license": "MIT",
@@ -8,7 +8,8 @@
     "devflow-mcp": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "checklists"
   ],
   "engines": {
     "node": ">=22"

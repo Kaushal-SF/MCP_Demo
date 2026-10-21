@@ -8,48 +8,66 @@
 
 ```
  MCP host (Claude Code / Desktop / VS Code)
-        │  JSON-RPC 2.0 over stdio   (Streamable HTTP planned, Milestone 3)
+        │  JSON-RPC 2.0 over stdio   (Streamable HTTP planned, Milestone 4)
         ▼
- ┌──────────────────────────────────────────────────────────────┐
- │ transports/      stdio.ts: process wiring, graceful shutdown │
- ├──────────────────────────────────────────────────────────────┤
- │ server.ts        McpServer: identity, instructions,          │
- │                  capabilities, registers tools               │
- ├──────────────────────────────────────────────────────────────┤
- │ tools/           one file per tool: input/output schemas,    │
- │                  annotations, LLM-facing description         │
- │                  → calls a service inside runTool()          │
- ├──────────────────────────────────────────────────────────────┤
- │ services/        business logic, no MCP knowledge            │
- │                  pr-context · risk-analyzer · review-queue   │
- ├──────────────────────────────────────────────────────────────┤
- │ clients/         GitHubClient interface (port) +             │
- │                  OctokitGitHubClient (adapter)               │
- └──────────────────────────────────────────────────────────────┘
-        │  HTTPS (REST)
+ ┌──────────────────────────────────────────────────────────────────────┐
+ │ transports/   stdio.ts: process wiring, graceful shutdown            │
+ ├──────────────────────────────────────────────────────────────────────┤
+ │ server.ts     McpServer: identity, instructions, capabilities;       │
+ │               registers every tool, resource and prompt              │
+ ├───────────────────────┬──────────────────────┬───────────────────────┤
+ │ tools/  (6)           │ resources/  (2)      │ prompts/  (3)         │
+ │ model-controlled      │ app/user-controlled  │ user-controlled       │
+ │ actions; runTool()    │ reference material;  │ playbooks with arg    │
+ │ → isError results     │ runRequest()         │ completion;           │
+ │                       │ → JSON-RPC errors    │ runRequest()          │
+ ├───────────────────────┴──────────────────────┴───────────────────────┤
+ │ services/     business logic, no MCP knowledge                       │
+ │   pr-context · risk-analyzer · pr-diff · review-queue · activity ·   │
+ │   release-notes · repo-guidelines · checklists · suggestions         │
+ ├──────────────────────────────────────────────────────────────────────┤
+ │ clients/      GitHubClient interface (port) + OctokitGitHubClient    │
+ └──────────────────────────────────────────────────────────────────────┘
+        │  HTTPS (REST)                          checklists/*.md (local files)
         ▼
      GitHub API
+
+ Cross-cutting (lib/): errors · logger + McpLogBridge (logs → notifications/message) ·
+ tool-result · request-result · pr-ref · glob · pagination · package-root
 ```
 
 Dependencies point **downwards only**. Services depend on the `GitHubClient` _interface_, so tests
 inject `FakeGitHubClient` and a future GitLab or Jira adapter can be added without touching
-services or tools.
+services, tools, resources or prompts. Everything a registration needs arrives through one
+`ServerContext` object (`src/context.ts`), built in `index.ts` or by tests.
+
+**Which MCP primitive for what:**
+
+| Primitive | Who decides to use it                   | DevFlow uses it for                                          |
+| --------- | --------------------------------------- | ------------------------------------------------------------ |
+| Tool      | The model, mid-conversation             | Fetching and analysing live GitHub data                      |
+| Resource  | The user or host attaches it as context | Review checklists; a repo's contribution guidelines          |
+| Prompt    | The user, typically as a slash-command  | `/review-pr`, `/standup-summary`, `/release-notes` playbooks |
 
 ## Directory layout
 
-| Path                    | Responsibility                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| `src/index.ts`          | CLI entry: parse flags, load config, build dependencies, start transport          |
-| `src/config.ts`         | zod-validated env config; fails fast with a readable message                      |
-| `src/server.ts`         | `createServer(ctx)`: transport-agnostic server factory                            |
-| `src/transports/`       | stdio now; HTTP later                                                             |
-| `src/tools/`            | MCP tool registrations + `schemas.ts` (input/output schemas, drift checks)        |
-| `src/services/`         | Pure-ish logic: context gathering, risk heuristics, review queue                  |
-| `src/clients/github.ts` | Domain types, `GitHubClient` port, Octokit adapter, HTTP error mapping            |
-| `src/lib/`              | Cross-cutting: errors, logger, tool-result wrapper, PR-ref parsing, glob, cursors |
-| `test/unit/`            | Services, lib, and the Octokit adapter (against msw-mocked HTTP)                  |
-| `test/integration/`     | Real MCP `Client` ↔ server over `InMemoryTransport`                               |
-| `scripts/smoke.ts`      | Live end-to-end check: spawns `dist/index.js` over stdio and calls each tool      |
+| Path                    | Responsibility                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `src/index.ts`          | Composition root: parse flags, load config, build dependencies, attach logging, start stdio         |
+| `src/config.ts`         | zod-validated env config; fails fast with a readable message                                        |
+| `src/context.ts`        | `ServerContext`: the dependency bundle passed to every registration                                 |
+| `src/server.ts`         | `createServer(ctx)`: transport-agnostic server factory                                              |
+| `src/transports/`       | stdio now; HTTP in M4                                                                               |
+| `src/tools/`            | Tool registrations + `schemas.ts` (input/output schemas, compile-time drift checks)                 |
+| `src/resources/`        | Resource-template registrations (checklists, repo guidelines)                                       |
+| `src/prompts/`          | Prompt registrations with argument completion                                                       |
+| `src/services/`         | Business logic: context, risk, diff, queue, activity, release notes, guidelines, checklists         |
+| `src/clients/github.ts` | Domain types, `GitHubClient` port, Octokit adapter, HTTP error mapping                              |
+| `src/lib/`              | Cross-cutting helpers (see diagram)                                                                 |
+| `checklists/`           | Bundled review checklists (Markdown); replaceable via `DEVFLOW_CHECKLISTS_DIR`                      |
+| `test/unit/`            | Services, lib, log bridge, and the Octokit adapter (against msw-mocked HTTP)                        |
+| `test/integration/`     | Real MCP `Client` ↔ server over `InMemoryTransport`: tools, resources, prompts, completion, logging |
+| `scripts/smoke.ts`      | Live end-to-end check: spawns `dist/index.js` over stdio and exercises every capability             |
 
 ## Request lifecycle (`tools/call`)
 
@@ -62,15 +80,15 @@ Summary below; the step-by-step trace with diagrams for every tool and error pat
 3. The tool handler parses the PR reference and calls a service inside `runTool()`.
 4. The service calls `GitHubClient`. The Octokit adapter maps raw API JSON to domain types and
    HTTP failures to `DevflowError`s (`NOT_FOUND`, `RATE_LIMITED`, …) with actionable messages.
-5. `runTool()` returns `structuredContent` plus the same JSON as text. The SDK validates
-   `structuredContent` against the published `outputSchema`.
+5. `runTool()` parses the result with the tool's output schema (dropping undeclared fields),
+   then returns `structuredContent` plus the same JSON as text.
 6. On failure, `runTool()` returns `isError: true` with `[CODE] message`. Unknown errors become a
    generic `[INTERNAL]` message, with full details logged to stderr.
 
 ## Key decisions
 
 Every significant choice, with the alternatives considered, the reasoning and the trade-offs, is
-recorded in **[Decisions.md](Decisions.md)** (D1–D24). Highlights:
+recorded in **[Decisions.md](Decisions.md)** (D1–D34). Highlights:
 
 - Few task-shaped tools instead of API wrappers (D4)
 - Structured output with drift-checked schemas (D6, D7)
@@ -78,7 +96,9 @@ recorded in **[Decisions.md](Decisions.md)** (D1–D24). Highlights:
 - Ports & adapters for GitHub (D9)
 - Deterministic risk heuristics (D12)
 - Untrusted-content handling (D13)
-- stderr-only logging (D14)
+- stderr-only logging, bridged to MCP notifications at a host-chosen level (D14, D28)
+- Prompts orchestrate tools rather than pre-fetching (D30)
+- Every tool result is parsed through its own output schema before sending (D34)
 
 ## Testing strategy
 

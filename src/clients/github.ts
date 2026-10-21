@@ -1,5 +1,5 @@
 import { Octokit } from '@octokit/rest';
-import { mapGitHubError } from '../lib/errors.js';
+import { DevflowError, mapGitHubError } from '../lib/errors.js';
 import { formatPullRequestRef, type PullRequestRef, type RepoRef } from '../lib/pr-ref.js';
 
 // ---------------------------------------------------------------------------
@@ -41,6 +41,11 @@ export interface ChangedFile {
   additions: number;
   deletions: number;
   previousPath?: string;
+  /**
+   * Unified diff for this file. Only present when requested (it is large), and GitHub omits it
+   * for binary files and very large diffs. Author-controlled content: untrusted.
+   */
+  patch?: string;
 }
 
 export type CheckState = 'success' | 'failure' | 'pending' | 'none';
@@ -72,9 +77,32 @@ export interface ReviewRequestItem {
   updatedAt: string;
 }
 
+/** A pull request as returned by GitHub search: lighter than PullRequestInfo (no sizes). */
+export interface PullRequestSearchItem extends ReviewRequestItem {
+  state: PullRequestState;
+  labels: string[];
+  closedAt: string | null;
+  mergedAt: string | null;
+}
+
 export interface SearchPage<T> {
   items: T[];
   totalCount: number;
+}
+
+export interface CommitInfo {
+  sha: string;
+  /** Committer date (ISO 8601): when the commit landed on the branch, not when it was written. */
+  date: string;
+}
+
+export interface PullRequestSearchParams {
+  /** GitHub search qualifiers, e.g. ["is:pr", "author:octocat"]. Joined with spaces. */
+  qualifiers: string[];
+  sort?: 'created' | 'updated';
+  order?: 'asc' | 'desc';
+  page: number;
+  perPage: number;
 }
 
 /** The port that services depend on. Tests provide a fake implementation. */
@@ -84,8 +112,14 @@ export interface GitHubClient {
   listPullRequestFiles(
     ref: PullRequestRef,
     limit: number,
+    options?: { includePatch?: boolean },
   ): Promise<{ files: ChangedFile[]; truncated: boolean }>;
   getCheckSummary(repo: RepoRef, sha: string): Promise<CheckSummary>;
+  /** Resolves a tag, branch or SHA to its commit. */
+  getCommit(repo: RepoRef, ref: string): Promise<CommitInfo>;
+  /** Text of a file on the default branch, or null when it does not exist. */
+  getFileText(repo: RepoRef, path: string): Promise<string | null>;
+  searchPullRequests(params: PullRequestSearchParams): Promise<SearchPage<PullRequestSearchItem>>;
   searchReviewRequests(params: {
     login: string;
     repo?: RepoRef;
@@ -188,6 +222,7 @@ export class OctokitGitHubClient implements GitHubClient {
   async listPullRequestFiles(
     ref: PullRequestRef,
     limit: number,
+    options: { includePatch?: boolean } = {},
   ): Promise<{ files: ChangedFile[]; truncated: boolean }> {
     const files: ChangedFile[] = [];
     try {
@@ -208,6 +243,9 @@ export class OctokitGitHubClient implements GitHubClient {
             additions: file.additions,
             deletions: file.deletions,
             ...(file.previous_filename ? { previousPath: file.previous_filename } : {}),
+            // The patch arrives in the same response either way; we only keep it when asked so
+            // callers that need just the file list do not carry megabytes of diff around.
+            ...(options.includePatch && file.patch ? { patch: file.patch } : {}),
           });
         }
       }
@@ -286,25 +324,57 @@ export class OctokitGitHubClient implements GitHubClient {
     }
   }
 
-  async searchReviewRequests(params: {
-    login: string;
-    repo?: RepoRef;
-    page: number;
-    perPage: number;
-  }): Promise<SearchPage<ReviewRequestItem>> {
-    const qualifiers = [
-      'is:pr',
-      'is:open',
-      'archived:false', // archived repos are read-only, so their review requests are dead ends
-      // An explicit login rather than `@me` keeps the query unambiguous and readable in logs.
-      `review-requested:${params.login}`,
-      ...(params.repo ? [`repo:${params.repo.owner}/${params.repo.repo}`] : []),
-    ];
+  async getCommit(repo: RepoRef, ref: string): Promise<CommitInfo> {
+    try {
+      const { data } = await this.octokit.rest.repos.getCommit({
+        owner: repo.owner,
+        repo: repo.repo,
+        ref,
+      });
+      // Committer date, not author date: a rebased commit keeps its old author date, but the
+      // committer date is when it actually entered the branch, which is what "since" means.
+      const date = data.commit.committer?.date ?? data.commit.author?.date;
+      if (!date) throw new DevflowError('UPSTREAM_ERROR', `GitHub returned no date for ${ref}.`);
+      return { sha: data.sha, date };
+    } catch (error) {
+      // 422 here means "no commit matches this ref", which users experience as not found.
+      if ((error as { status?: unknown }).status === 422) {
+        throw new DevflowError(
+          'NOT_FOUND',
+          `"${ref}" is not a tag, branch or commit in ${repo.owner}/${repo.repo}.`,
+          { cause: error },
+        );
+      }
+      throw mapGitHubError(error, `ref "${ref}" in ${repo.owner}/${repo.repo}`);
+    }
+  }
+
+  async getFileText(repo: RepoRef, path: string): Promise<string | null> {
+    try {
+      const { data } = await this.octokit.rest.repos.getContent({
+        owner: repo.owner,
+        repo: repo.repo,
+        path,
+      });
+      // getContent also returns directories (arrays), symlinks and submodules. Only a file with
+      // inline base64 content is usable; files over 1 MB come back with encoding "none".
+      if (Array.isArray(data) || data.type !== 'file' || data.encoding !== 'base64') return null;
+      return Buffer.from(data.content, 'base64').toString('utf8');
+    } catch (error) {
+      // A missing file is a normal answer for "does this repo have X?", not a failure.
+      if ((error as { status?: unknown }).status === 404) return null;
+      throw mapGitHubError(error, `${path} in ${repo.owner}/${repo.repo}`);
+    }
+  }
+
+  async searchPullRequests(
+    params: PullRequestSearchParams,
+  ): Promise<SearchPage<PullRequestSearchItem>> {
     try {
       const { data } = await this.octokit.rest.search.issuesAndPullRequests({
-        q: qualifiers.join(' '),
-        sort: 'created',
-        order: 'asc', // oldest first: those have waited longest
+        q: params.qualifiers.join(' '),
+        ...(params.sort ? { sort: params.sort } : {}),
+        ...(params.order ? { order: params.order } : {}),
         page: params.page,
         per_page: params.perPage,
       });
@@ -313,19 +383,46 @@ export class OctokitGitHubClient implements GitHubClient {
         items: data.items.map((item) => {
           // Search results have no owner/repo fields; derive them from ".../repos/{owner}/{repo}".
           const [owner = '', repo = ''] = item.repository_url.split('/').slice(-2);
+          const mergedAt = item.pull_request?.merged_at ?? null;
           return {
             ref: { owner, repo, number: item.number },
             url: item.html_url,
             title: item.title,
             author: item.user?.login ?? 'unknown',
             draft: item.draft ?? false,
+            state: mergedAt ? 'merged' : item.state === 'open' ? 'open' : 'closed',
+            labels: item.labels.flatMap((label) => (label.name ? [label.name] : [])),
             createdAt: item.created_at,
             updatedAt: item.updated_at,
+            closedAt: item.closed_at,
+            mergedAt,
           };
         }),
       };
     } catch (error) {
-      throw mapGitHubError(error, 'review requests (GitHub search)');
+      throw mapGitHubError(error, 'pull requests (GitHub search)');
     }
+  }
+
+  async searchReviewRequests(params: {
+    login: string;
+    repo?: RepoRef;
+    page: number;
+    perPage: number;
+  }): Promise<SearchPage<ReviewRequestItem>> {
+    return this.searchPullRequests({
+      qualifiers: [
+        'is:pr',
+        'is:open',
+        'archived:false', // archived repos are read-only, so their review requests are dead ends
+        // An explicit login rather than `@me` keeps the query unambiguous and readable in logs.
+        `review-requested:${params.login}`,
+        ...(params.repo ? [`repo:${params.repo.owner}/${params.repo.repo}`] : []),
+      ],
+      sort: 'created',
+      order: 'asc', // oldest first: those have waited longest
+      page: params.page,
+      perPage: params.perPage,
+    });
   }
 }

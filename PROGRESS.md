@@ -5,20 +5,20 @@ Each milestone ends with verification, an update to this file, and a git commit.
 
 ## Goal → milestone map
 
-| Sub-goal                                            | Covered by                                                                                                             | Status         |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 1. Understand MCP fundamentals & architecture       | [ARCHITECTURE.md](ARCHITECTURE.md), [Flow.md](Flow.md), [Decisions.md](Decisions.md), learning notes in each milestone | 🟡 In progress |
-| 2. Practical MCP server implementation & deployment | Milestones 1–5 below                                                                                                   | 🟡 In progress |
-| 3. Integrate MCP with real workflow                 | Daily use in Claude Code / VS Code after M2; feedback round                                                            | ⚪ Not started |
-| 4. Reinforcement & validation                       | Security review, evals, metrics, demo                                                                                  | ⚪ Not started |
+| Sub-goal                                            | Covered by                                                                                                             | Status                      |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| 1. Understand MCP fundamentals & architecture       | [ARCHITECTURE.md](ARCHITECTURE.md), [Flow.md](Flow.md), [Decisions.md](Decisions.md), learning notes in each milestone | 🟡 In progress              |
+| 2. Practical MCP server implementation & deployment | Milestones 1–5 below                                                                                                   | 🟡 In progress              |
+| 3. Integrate MCP with real workflow                 | Daily use in Claude Code / VS Code after M2; feedback round                                                            | 🟢 Ready to start (M2 done) |
+| 4. Reinforcement & validation                       | Security review, evals, metrics, demo                                                                                  | ⚪ Not started              |
 
 ## Milestones (Sub-goal 2)
 
 | #   | Milestone                                                                                                                                                                   | Status               |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
 | M1  | Scaffold, core infrastructure, stdio transport, 3 read-only tools, tests, CI, docs                                                                                          | ✅ Done (2026-10-15) |
-| M2  | Resources (review checklists, repo guidelines), prompts (`review-pr`, `standup-summary`, `release-notes`), `generate_release_notes` tool, argument completions, MCP logging | ⏭ Next               |
-| M3  | `post_review_comment` write tool behind `DEVFLOW_ENABLE_WRITE`, with elicitation-based confirmation                                                                         | ⚪ Planned           |
+| M2  | Resources (review checklists, repo guidelines), prompts (`review-pr`, `standup-summary`, `release-notes`), `generate_release_notes` tool, argument completions, MCP logging | ✅ Done (2026-10-21) |
+| M3  | `post_review_comment` write tool behind `DEVFLOW_ENABLE_WRITE`, with elicitation-based confirmation                                                                         | ⏭ Next               |
 | M4  | Streamable HTTP transport + OAuth 2.1 resource server, Docker image, cloud deployment, `/healthz`                                                                           | ⚪ Planned           |
 | M5  | Release engineering: Changesets, npm publish, v1.0.0, MCP registry listing                                                                                                  | ⚪ Planned           |
 
@@ -118,11 +118,113 @@ Requested after M1 review: record _why_, not just _what_, and make execution eas
 
 ---
 
-## Next up: M2 (planned)
+## M2: Resources, prompts, release notes, logging ✅
 
-- [ ] Resource template `devflow://checklists/{name}` serving bundled Markdown checklists (react, node, security, general)
-- [ ] Resource template `devflow://repos/{owner}/{repo}/guidelines` (CONTRIBUTING.md + PR template)
-- [ ] `generate_release_notes` tool: merged PRs between two tags/dates, grouped by conventional-commit type/label
-- [ ] Prompts: `review-pr`, `release-notes`, `standup-summary`, with argument completions
-- [ ] Bridge server logs to MCP `notifications/message` (respecting `logging/setLevel`)
-- [ ] Tests + smoke coverage for all of the above; update docs and this log
+**Date:** 2026-10-21 · **Version:** 0.2.0
+
+### What was built
+
+- **3 new tools** (6 in total):
+  - `get_pr_diff`: unified-diff patches for chosen paths or globs within a character budget.
+    Generated files are skipped unless named, and anything left out is listed with a reason.
+    _Added beyond the plan:_ without it `/review-pr` could see which files changed but not the
+    code (Decisions D25).
+  - `get_my_activity`: PRs merged, in progress and reviewed over N days, plus pending review
+    requests. _Added beyond the plan:_ the stand-up prompt needed a data source (D26).
+  - `generate_release_notes`: tag, branch, SHA or date range; groups by conventional-commit
+    type, then labels; breaking changes first; contributors; ready-to-paste Markdown (D29).
+- **2 resource templates:**
+  - `devflow://checklists/{name}`: 4 bundled Markdown checklists (`general`, `react`, `node`,
+    `security`), listed, autocompleted, and replaceable with `DEVFLOW_CHECKLISTS_DIR` (D27).
+  - `devflow://repos/{owner}/{repo}/guidelines`: CONTRIBUTING plus PR template, found by probing
+    9 paths in parallel (D33).
+- **3 prompts:** `/review-pr` (embeds the chosen checklist), `/standup-summary`, `/release-notes`.
+  They orchestrate tools rather than pre-fetching data (D30).
+- **Argument completion:** `/review-pr`'s `pr` suggests the PRs waiting for your review (cached
+  60 s, D31); checklists, repos and days also autocomplete.
+- **MCP logging bridge:** log lines reach the host as `notifications/message`, at `warning` by
+  default and following `logging/setLevel`, with stack traces stripped (D28).
+- **Plumbing:** `ServerContext` replaces `ToolContext`. `runRequest()` gives resources and prompts
+  consistent JSON-RPC errors (D32). The GitHub client gained `getCommit`, `getFileText`,
+  `searchPullRequests` and optional patches.
+- **Docs:** Decisions D25–D34; Flow.md rewritten (18 sections, 15 validated diagrams, including the
+  full `/review-pr` journey); ARCHITECTURE, README (with a _Try it_ section and the real clone URL),
+  CHANGELOG, `.env.example`, `checklists/README.md`.
+
+### Verification results
+
+| Check                                                      | Result                                                                                                             |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| lint / typecheck / format                                  | ✅ clean                                                                                                           |
+| `npm test`                                                 | ✅ 155 tests in 8 files (up from 102)                                                                              |
+| Coverage                                                   | ✅ 98.7% lines, 86.7% branches                                                                                     |
+| Build + `--version`                                        | ✅ `devflow-mcp 0.2.0`                                                                                             |
+| Live smoke (`npm run smoke`): all 6 tools                  | ✅ all OK against real GitHub                                                                                      |
+| Live: resources                                            | ✅ 4 checklists listed; `react` read; `typescript-sdk` guidelines found (`CONTRIBUTING.md`, truncated at 8k chars) |
+| Live: `/review-pr` prompt + `pr` completion                | ✅ text + embedded resource; completion offered the 4 real pending reviews                                         |
+| Live: release notes, tag range `v2.2.0 → v2.3.0`           | ✅ 30 PRs, refs resolved to commit dates, grouped by scope and type                                                |
+| Path-traversal attempt `devflow://checklists/..%2Fsecrets` | ✅ rejected with -32602 before touching the file system                                                            |
+
+### A bug the live test caught (and what changed because of it)
+
+The first live smoke run failed on `list_review_queue`: the real SDK client rejected the output with
+_"must NOT have additional properties"_.
+
+- **Cause:** `searchReviewRequests` was rebuilt on the richer general search, and the review queue
+  spread `...item` into its output, adding 4 undeclared fields.
+- **Why the server didn't catch it:** the SDK's server-side check ignores unknown keys, but the
+  published JSON Schema has `additionalProperties: false`, and clients enforce that.
+- **Why the tests didn't catch it:**
+  1. The fake client still returned the old, narrow shape.
+  2. The SDK client only validates output for tools it has _listed_, and the integration test never
+     called `tools/list`.
+- **Fixes:**
+  1. The review queue copies fields explicitly.
+  2. `runTool()` now parses every result through the tool's output schema, so undeclared fields are
+     impossible (D34).
+  3. The fake mirrors the real client.
+  4. Integration tests call `tools/list` first, like a real host.
+  5. There are regression tests for both stripping and the `[INTERNAL]` error on a broken result.
+
+### Learnings (Sub-goal 1)
+
+- **Resources vs tools vs prompts** in practice: tools are for live data the model fetches;
+  resources are for reference text someone attaches; prompts are user-chosen playbooks. Picking the
+  right primitive made each feature simpler.
+- **Prompt arguments are always strings.** Numbers (like `days`) must be parsed and validated in
+  the callback.
+- **Resource templates:** a `list` callback makes concrete instances show up in `resources/list`,
+  and `complete` powers variable completion. The SDK enables `completions` automatically.
+- **Logging:** until a host calls `logging/setLevel`, the SDK forwards _everything_, and it keeps
+  the chosen level private. Owning that handler was the clean way to have a sensible default.
+- **Schema strictness differs by side.** zod on the server ignores extra keys; the JSON Schema
+  clients use does not. Always test the way a real host behaves.
+- The GitHub search `merged:A..B` range and second-precision timestamps work well for release
+  windows; milliseconds break the qualifier.
+
+### Observations to act on later
+
+- **Bot authors** (e.g. `claude[bot]`) appear in release-note lines but are excluded from
+  Contributors. Revisit if teams want to credit bots or hide their PRs.
+- **"Reviewed"** in `get_my_activity` is approximate (D26).
+- **Risk heuristic tuning** from M1 (docs/scripts counted as production code) is still open. It's
+  best done with real team PRs in Sub-goal 3.
+
+### How to try it
+
+```bash
+npm ci && npm run build
+GITHUB_TOKEN=$(gh auth token) npm run smoke -- owner/repo#123 v1.0.0
+claude mcp add devflow --env GITHUB_TOKEN=$(gh auth token) -- node "$PWD/dist/index.js"
+# then in Claude Code: /review-pr  (pick a PR from the suggestions)
+```
+
+---
+
+## Next up: M3 (planned)
+
+- [ ] `post_review_comment` tool, disabled unless `DEVFLOW_ENABLE_WRITE=true`, annotated as non-read-only
+- [ ] Confirmation through MCP elicitation (with a safe fallback for hosts without elicitation)
+- [ ] Least-privilege token guidance for write access; audit logging of every write
+- [ ] Wire it into `/review-pr` as an optional final step ("post this comment?")
+- [ ] Tests, smoke coverage (against a sandbox repo), docs and this log

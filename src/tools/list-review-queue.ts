@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { parseRepoRef } from '../lib/pr-ref.js';
 import { runTool } from '../lib/tool-result.js';
 import { listReviewQueue } from '../services/review-queue.js';
-import type { ToolContext } from './context.js';
+import type { ServerContext } from '../context.js';
 import { ReviewQueueOutputSchema } from './schemas.js';
 
-export function registerListReviewQueue(server: McpServer, ctx: ToolContext): void {
+export function registerListReviewQueue(server: McpServer, ctx: ServerContext): void {
   server.registerTool(
     'list_review_queue',
     {
@@ -39,7 +39,7 @@ export function registerListReviewQueue(server: McpServer, ctx: ToolContext): vo
       },
     },
     ({ repo, limit, cursor }) =>
-      runTool(ctx.logger, 'list_review_queue', () =>
+      runTool(ctx.logger, 'list_review_queue', ReviewQueueOutputSchema, () =>
         listReviewQueue(ctx.github, {
           limit,
           ...(repo ? { repo: parseRepoRef(repo) } : {}),
