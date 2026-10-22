@@ -21,7 +21,8 @@ First complete release: simple to install, simple to demo. See Decisions.md D35â
 - The build is one self-contained file with every dependency bundled, so the package has no
   runtime dependencies and `npx` starts it without installing anything.
 - `GITHUB_TOKEN` is optional.
-- README rewritten around a two-minute install.
+- README rewritten around a two-minute install, with a **Test it** section (public-PR checks with
+  expected results), per-host slash-command names, and troubleshooting.
 - Scope: read-only and local by design. The planned write tool and remote HTTP deployment were
   dropped (D35).
 

@@ -13,32 +13,52 @@ Works with Claude Code, Claude Desktop, VS Code (Copilot agent mode), Cursor and
 
 ## What you can ask
 
-| Ask or type                                                      | What you get                                                                     |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| _"What's in my review queue?"_                                   | PRs waiting for you, oldest first, with their size                               |
-| `/review-pr`, then pick a PR from the list                       | A structured review: summary, risk, findings, checklist, a comment ready to post |
-| _"How risky is owner/repo#123?"_                                 | A 0–100 score, the reasons, and which files to read first                        |
-| `/standup-summary`                                               | Yesterday / Today / Blockers from your real GitHub activity                      |
-| _"Release notes for owner/repo from v1.2.0"_ or `/release-notes` | Merged PRs grouped into Features, Bug fixes and so on, breaking changes first    |
+| Ask                                                        | What you get                                                                     |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| _"What's in my review queue?"_                             | PRs waiting for you, oldest first, with their size                               |
+| _"Review owner/repo#123 against the react checklist"_      | A structured review: summary, risk, findings, checklist, a comment ready to post |
+| _"How risky is owner/repo#123? What should I read first?"_ | A 0–100 score, the reasons, and which files to read first                        |
+| _"Write my stand-up"_                                      | Yesterday / Today / Blockers from your real GitHub activity                      |
+| _"Release notes for owner/repo from v1.2.0 to v1.3.0"_     | Merged PRs grouped into Features, Bug fixes and so on, breaking changes first    |
 
-PRs can be given as links (`https://github.com/owner/repo/pull/123`) or as `owner/repo#123`.
+PRs can be given as links (`https://github.com/owner/repo/pull/123`) or as `owner/repo#123`. The
+same tasks are also available as ready-made [slash commands](#slash-commands).
 
 ## Install (2 minutes)
 
-**You need:** [Node.js 22+](https://nodejs.org) and the [GitHub CLI](https://cli.github.com)
-signed in (`gh auth login`). DevFlow uses that login, so there is no token to create.
-(No GitHub CLI? See [Use your own token](#use-your-own-token).)
+**You need:**
 
-**Claude Code**
+- [Node.js 22 or newer](https://nodejs.org) (`node --version`)
+- The [GitHub CLI](https://cli.github.com), signed in: run `gh auth login`, then check with
+  `gh auth status`. DevFlow uses this login, so there is no token to create.
+  (No GitHub CLI? See [Use your own token](#use-your-own-token).)
+
+### Step 1: Get DevFlow
+
+**From npm** (once `devflow-pr-mcp` is published): nothing to download; `npx` fetches it in step 2.
+
+**From source** (works today, before the npm release):
 
 ```bash
-claude mcp add devflow -- npx -y devflow-pr-mcp
+git clone https://github.com/Kaushal-SF/MCP_Demo.git devflow
+cd devflow
+npm ci
+npm run build      # creates dist/index.js
+npm run bundle     # optional: creates build/devflow.mcpb for Claude Desktop
 ```
 
-**Claude Desktop**: download `devflow.mcpb`, double-click it, and click **Install**. Leave the token
-field empty.
+### Step 2: Add it to your AI tool
 
-**VS Code**: add to `.vscode/mcp.json` (or run **MCP: Add Server** from the command palette)
+| Host                  | From npm                                                                            | From source                                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Claude Code**       | `claude mcp add devflow -- npx -y devflow-pr-mcp`                                   | In the `devflow` folder: `claude mcp add devflow -- node "$PWD/dist/index.js"`                      |
+| **Claude Desktop**    | Download `devflow.mcpb` from the GitHub release, double-click it, **Install**       | Double-click `build/devflow.mcpb`, **Install**                                                      |
+| **VS Code**           | `.vscode/mcp.json` below, with `"command": "npx", "args": ["-y", "devflow-pr-mcp"]` | `.vscode/mcp.json` below, with `"command": "node", "args": ["/full/path/to/devflow/dist/index.js"]` |
+| **Cursor and others** | Command `npx`, arguments `-y devflow-pr-mcp`                                        | Command `node`, argument `/full/path/to/devflow/dist/index.js`                                      |
+
+In Claude Desktop, leave the token field empty if you use the GitHub CLI.
+
+VS Code `.vscode/mcp.json` (or run **MCP: Add Server** from the command palette):
 
 ```json
 {
@@ -48,20 +68,69 @@ field empty.
 }
 ```
 
-**Cursor and other hosts**: the command is `npx -y devflow-pr-mcp`.
+Restart the host (or start a new Claude Code session) after adding it.
 
-Then ask _"What's in my review queue?"_ to check it works.
+## Test it
 
-> **Before the npm release:** clone and build once, then use `node /full/path/to/dist/index.js`
-> instead of `npx -y devflow-pr-mcp`:
->
-> ```bash
-> git clone https://github.com/Kaushal-SF/MCP_Demo.git devflow && cd devflow
-> npm ci && npm run build
-> claude mcp add devflow -- node "$PWD/dist/index.js"
-> ```
->
-> `npm run bundle` builds the Claude Desktop installer at `build/devflow.mcpb`.
+These steps work for anyone, because they use a public repository.
+
+**1. Check it's connected**
+
+- Claude Code: `claude mcp list` shows `devflow: … ✓ Connected`. Inside a session, `/mcp` shows it too.
+- Claude Desktop: **Settings → Extensions** shows DevFlow as enabled.
+- VS Code: **MCP: List Servers** shows `devflow` as running.
+
+**2. Ask about a public PR**
+
+| Ask                                                                                  | You should see                                                                                     |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| _"How risky is modelcontextprotocol/typescript-sdk#2968? What should I read first?"_ | A score of 70/100 (high), the reasons, a list of files to read first, and CI with 18 checks passed |
+| _"Release notes for modelcontextprotocol/typescript-sdk from v2.2.0 to v2.3.0"_      | About 30 PRs grouped into sections, with contributors                                              |
+| _"Show me the react review checklist from devflow"_                                  | The bundled React checklist                                                                        |
+
+Your host may ask permission the first time each DevFlow tool runs. Every tool is read-only, so it is
+safe to allow them all.
+
+**3. Try your own data**
+
+- _"What's in my review queue?"_ lists PRs where your review is requested (it may be empty).
+- _"Write my stand-up for the last 3 days."_
+- `/mcp__devflow__review-pr` (Claude Code) with one of your PRs. See [Slash commands](#slash-commands).
+
+**4. Without an AI (optional)**: the [MCP Inspector](https://github.com/modelcontextprotocol/inspector)
+opens a web page where you can call each tool by hand:
+
+```bash
+npx @modelcontextprotocol/inspector npx -y devflow-pr-mcp     # from npm
+npm run inspect                                               # from source, in the devflow folder
+```
+
+### Slash commands
+
+DevFlow ships three ready-made prompts. Each host shows them differently:
+
+| Prompt        | Claude Code                      | VS Code                        | Claude Desktop                             |
+| ------------- | -------------------------------- | ------------------------------ | ------------------------------------------ |
+| Review a PR   | `/mcp__devflow__review-pr`       | `/mcp.devflow.review-pr`       | **+** button → DevFlow → `review-pr`       |
+| Stand-up      | `/mcp__devflow__standup-summary` | `/mcp.devflow.standup-summary` | **+** button → DevFlow → `standup-summary` |
+| Release notes | `/mcp__devflow__release-notes`   | `/mcp.devflow.release-notes`   | **+** button → DevFlow → `release-notes`   |
+
+In Claude Code, put arguments after the command, separated by spaces:
+`/mcp__devflow__review-pr owner/repo#123 react` or `/mcp__devflow__standup-summary 3`.
+Type `/devflow` to see them in the command list. The `pr` argument suggests the PRs waiting for your
+review in hosts that support suggestions.
+
+### Troubleshooting
+
+| Symptom                                      | Fix                                                                                                              |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| DevFlow is not listed, or shows as failed    | Check `node --version` is 22 or newer. Restart the host. In Claude Code, `claude mcp list` shows the error.      |
+| "No GitHub token found"                      | Run `gh auth login` (or set `GITHUB_TOKEN`), then restart the host.                                              |
+| Works in the terminal, not in Claude Desktop | Desktop apps don't see variables from your shell profile. Run `gh auth login`, or paste a token when installing. |
+| `[UNAUTHORIZED]`                             | Your login has expired: `gh auth status`, then `gh auth login`.                                                  |
+| `[NOT_FOUND]` for a PR                       | Check the link, and that your GitHub account can see that repository.                                            |
+| `[RATE_LIMITED]`                             | GitHub is limiting requests. Wait the time shown in the message.                                                 |
+| Organisation repos return `[FORBIDDEN]`      | The organisation may require SSO: `gh auth refresh`, or authorise your token for SSO on GitHub.                  |
 
 ## What's inside
 
@@ -76,13 +145,13 @@ Then ask _"What's in my review queue?"_ to check it works.
 | `get_my_activity`        | Your PRs merged, in progress and reviewed in the last N days, plus reviews waiting for you      |
 | `generate_release_notes` | PRs merged between two tags, branches, commits or dates, grouped by type, as Markdown           |
 
-**Prompts**: slash commands. Arguments autocomplete; `/review-pr` suggests your pending reviews.
+**Prompts**: ready-made tasks; see [Slash commands](#slash-commands) for how each host shows them.
 
-| Prompt             | Arguments             | What it does                                                                          |
-| ------------------ | --------------------- | ------------------------------------------------------------------------------------- |
-| `/review-pr`       | `pr`, `checklist?`    | Context → risk → diff of the riskiest files → checklist → review with a draft comment |
-| `/standup-summary` | `days?`, `repo?`      | Yesterday / Today / Blockers                                                          |
-| `/release-notes`   | `repo`, `from`, `to?` | Reader-friendly release notes                                                         |
+| Prompt            | Arguments             | What it does                                                                          |
+| ----------------- | --------------------- | ------------------------------------------------------------------------------------- |
+| `review-pr`       | `pr`, `checklist?`    | Context → risk → diff of the riskiest files → checklist → review with a draft comment |
+| `standup-summary` | `days?`, `repo?`      | Yesterday / Today / Blockers                                                          |
+| `release-notes`   | `repo`, `from`, `to?` | Reader-friendly release notes                                                         |
 
 **Resources**: reference material you can attach in hosts that support it.
 

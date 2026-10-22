@@ -265,6 +265,30 @@ This milestone removes setup instead of adding features. The full reasoning is i
 | `.mcpb` manifest validation and unpacked contents       | ✅ valid; 9 files, layout correct                                        |
 | Bad config / no login                                   | ✅ clear startup messages naming the variable or the two ways to sign in |
 
+### Tested in a real host (2026-10-22)
+
+DevFlow was loaded into real Claude Code sessions (`claude -p --mcp-config … --strict-mcp-config`,
+so the user's own setup was untouched), and the README's test steps were run exactly as written:
+
+| Step                                                                     | Result                                                                                          |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| _"How risky is modelcontextprotocol/typescript-sdk#2968?"_               | ✅ Claude chose `get_pr_context` + `analyze_pr_risk`; 70/100 with files to read first           |
+| `/mcp__devflow__review-pr modelcontextprotocol/typescript-sdk#2968 node` | ✅ context → risk → diff → checklist resource; a full review with specific, line-level findings |
+| `/mcp__devflow__standup-summary 3`                                       | ✅ Yesterday / Today / Blockers from the real review queue                                      |
+| _"Show me the react review checklist from devflow"_                      | ✅ resource read, 21 items                                                                      |
+
+What it changed in the docs:
+
+- **Slash-command names were wrong.** Hosts prefix MCP prompts: Claude Code uses
+  `/mcp__devflow__review-pr`, VS Code `/mcp.devflow.review-pr`, Claude Desktop the **+** menu. The
+  README and DEMO.md said `/review-pr`. Fixed, with a per-host table.
+- **The suggested first check proved nothing for many users.** _"What's in my review queue?"_ is
+  empty for anyone with no pending reviews. The README now has a **Test it** section using a public
+  PR with the expected result, plus connection checks per host, the MCP Inspector, and a
+  troubleshooting table.
+- The README install now shows both paths side by side for each host: from npm (after publishing)
+  and from source (works today).
+
 ### Bugs found and fixed
 
 - **Secondary rate limit misreported (found by the live smoke test).** A burst of searches tripped
