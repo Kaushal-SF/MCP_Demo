@@ -31,7 +31,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "inspect": "npm run build && npx @modelcontextprotocol/inspector node dist/index.js",
+    "inspect": "npm run build && npx -y @modelcontextprotocol/inspector@2.12.0 -e \"GITHUB_TOKEN=${GITHUB_TOKEN:-$GH_TOKEN}\" node dist/index.js",
     "smoke": "tsx scripts/smoke.ts",
     "bundle": "npm run build && tsx scripts/bundle.ts",
     "prepublishOnly": "npm run build"

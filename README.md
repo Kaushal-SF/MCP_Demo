@@ -101,8 +101,20 @@ safe to allow them all.
 opens a web page where you can call each tool by hand:
 
 ```bash
-npx @modelcontextprotocol/inspector npx -y devflow-pr-mcp     # from npm
 npm run inspect                                               # from source, in the devflow folder
+npx @modelcontextprotocol/inspector npx -y devflow-pr-mcp     # from npm
+```
+
+In the page, turn the server's switch on (it shows **Connected**), then open **Tools**, pick
+`analyze_pr_risk` and run it with `pr` = `modelcontextprotocol/typescript-sdk#2968`.
+
+The Inspector passes only basic variables (such as `HOME` and `PATH`) to the server, not the ones
+your shell sets. A GitHub CLI login (`gh auth login`) works anyway. If your token comes from a
+shell variable instead, pass it explicitly with `-e`. `npm run inspect` already does this for
+`GITHUB_TOKEN` and `GH_TOKEN`:
+
+```bash
+npx @modelcontextprotocol/inspector -e GITHUB_TOKEN=$GITHUB_TOKEN npx -y devflow-pr-mcp
 ```
 
 ### Slash commands
@@ -122,15 +134,15 @@ review in hosts that support suggestions.
 
 ### Troubleshooting
 
-| Symptom                                      | Fix                                                                                                              |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| DevFlow is not listed, or shows as failed    | Check `node --version` is 22 or newer. Restart the host. In Claude Code, `claude mcp list` shows the error.      |
-| "No GitHub token found"                      | Run `gh auth login` (or set `GITHUB_TOKEN`), then restart the host.                                              |
-| Works in the terminal, not in Claude Desktop | Desktop apps don't see variables from your shell profile. Run `gh auth login`, or paste a token when installing. |
-| `[UNAUTHORIZED]`                             | Your login has expired: `gh auth status`, then `gh auth login`.                                                  |
-| `[NOT_FOUND]` for a PR                       | Check the link, and that your GitHub account can see that repository.                                            |
-| `[RATE_LIMITED]`                             | GitHub is limiting requests. Wait the time shown in the message.                                                 |
-| Organisation repos return `[FORBIDDEN]`      | The organisation may require SSO: `gh auth refresh`, or authorise your token for SSO on GitHub.                  |
+| Symptom                                                                                     | Fix                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DevFlow is not listed, or shows as failed                                                   | Check `node --version` is 22 or newer. Restart the host. In Claude Code, `claude mcp list` shows the error.                                                                                                                                                      |
+| "No GitHub token found"                                                                     | Run `gh auth login` (or set `GITHUB_TOKEN`), then restart the host.                                                                                                                                                                                              |
+| Works in the terminal, but Claude Desktop or the MCP Inspector says "No GitHub token found" | They don't pass on variables from your shell profile (such as `GH_TOKEN`). Run `gh auth login` once. If `gh` says `GH_TOKEN` is in use, run `env -u GH_TOKEN gh auth login`. Or paste a token when installing (Desktop), or use `-e GITHUB_TOKEN=…` (Inspector). |
+| `[UNAUTHORIZED]`                                                                            | Your login has expired: `gh auth status`, then `gh auth login`.                                                                                                                                                                                                  |
+| `[NOT_FOUND]` for a PR                                                                      | Check the link, and that your GitHub account can see that repository.                                                                                                                                                                                            |
+| `[RATE_LIMITED]`                                                                            | GitHub is limiting requests. Wait the time shown in the message.                                                                                                                                                                                                 |
+| Organisation repos return `[FORBIDDEN]`                                                     | The organisation may require SSO: `gh auth refresh`, or authorise your token for SSO on GitHub.                                                                                                                                                                  |
 
 ## What's inside
 

@@ -304,6 +304,11 @@ What it changed in the docs:
 - **Desktop apps don't inherit your shell.** A server started by Claude Desktop sees a minimal PATH
   and none of your shell's variables, so anything found through the shell (like `gh`, or a
   `GH_TOKEN` exported in `.zshrc`) must be looked up explicitly or configured.
+- **The MCP Inspector strips the environment too** (2026-10-23, reported by the owner): it passes
+  only `HOME`, `PATH`, `USER`, `SHELL`, `TERM` and `LOGNAME` to a stdio server, so a `GH_TOKEN` from
+  the shell never arrived and DevFlow correctly refused to start. `npm run inspect` now forwards
+  `GITHUB_TOKEN`/`GH_TOKEN` with the Inspector's `-e` option and pins Inspector 2.12.0; the README
+  explains it. A real `gh auth login` avoids the issue in every host.
 - **Bundling a stdio server** is the norm for fast `npx` starts; CommonJS dependencies inside an ES
   module bundle need a `require` provided through `createRequire`.
 
