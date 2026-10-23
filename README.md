@@ -51,7 +51,7 @@ npm run bundle     # optional: creates build/devflow.mcpb for Claude Desktop
 
 | Host                  | From npm                                                                            | From source                                                                                         |
 | --------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| **Claude Code**       | `claude mcp add devflow -- npx -y devflow-pr-mcp`                                   | In the `devflow` folder: `claude mcp add devflow -- node "$PWD/dist/index.js"`                      |
+| **Claude Code**       | `claude mcp add devflow --scope user -- npx -y devflow-pr-mcp`                      | In the `devflow` folder: `claude mcp add devflow --scope user -- node "$PWD/dist/index.js"`         |
 | **Claude Desktop**    | Download `devflow.mcpb` from the GitHub release, double-click it, **Install**       | Double-click `build/devflow.mcpb`, **Install**                                                      |
 | **VS Code**           | `.vscode/mcp.json` below, with `"command": "npx", "args": ["-y", "devflow-pr-mcp"]` | `.vscode/mcp.json` below, with `"command": "node", "args": ["/full/path/to/devflow/dist/index.js"]` |
 | **Cursor and others** | Command `npx`, arguments `-y devflow-pr-mcp`                                        | Command `node`, argument `/full/path/to/devflow/dist/index.js`                                      |
@@ -68,7 +68,9 @@ VS Code `.vscode/mcp.json` (or run **MCP: Add Server** from the command palette)
 }
 ```
 
-Restart the host (or start a new Claude Code session) after adding it.
+Restart the host (or start a new Claude Code session) after adding it. `--scope user` makes
+DevFlow available in every folder, not just the current one. Something not working? See
+[Troubleshooting](#troubleshooting).
 
 ## Test it
 
@@ -132,17 +134,182 @@ In Claude Code, put arguments after the command, separated by spaces:
 Type `/devflow` to see them in the command list. The `pr` argument suggests the PRs waiting for your
 review in hosts that support suggestions.
 
-### Troubleshooting
+## Troubleshooting
 
-| Symptom                                                                                     | Fix                                                                                                                                                                                                                                                              |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DevFlow is not listed, or shows as failed                                                   | Check `node --version` is 22 or newer. Restart the host. In Claude Code, `claude mcp list` shows the error.                                                                                                                                                      |
-| "No GitHub token found"                                                                     | Run `gh auth login` (or set `GITHUB_TOKEN`), then restart the host.                                                                                                                                                                                              |
-| Works in the terminal, but Claude Desktop or the MCP Inspector says "No GitHub token found" | They don't pass on variables from your shell profile (such as `GH_TOKEN`). Run `gh auth login` once. If `gh` says `GH_TOKEN` is in use, run `env -u GH_TOKEN gh auth login`. Or paste a token when installing (Desktop), or use `-e GITHUB_TOKEN=…` (Inspector). |
-| `[UNAUTHORIZED]`                                                                            | Your login has expired: `gh auth status`, then `gh auth login`.                                                                                                                                                                                                  |
-| `[NOT_FOUND]` for a PR                                                                      | Check the link, and that your GitHub account can see that repository.                                                                                                                                                                                            |
-| `[RATE_LIMITED]`                                                                            | GitHub is limiting requests. Wait the time shown in the message.                                                                                                                                                                                                 |
-| Organisation repos return `[FORBIDDEN]`                                                     | The organisation may require SSO: `gh auth refresh`, or authorise your token for SSO on GitHub.                                                                                                                                                                  |
+**First, find the actual error message.** It usually says what to do.
+
+| Host           | Where to look                                                                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code    | `claude mcp list` (status per server), `/mcp` inside a session (select `devflow` for details), or `claude --debug`                             |
+| Claude Desktop | **Settings → Extensions → DevFlow**, and the log files in `~/Library/Logs/Claude/` (macOS) or `%APPDATA%\Claude\logs` (Windows)                |
+| VS Code        | **MCP: List Servers** → `devflow` → **Show Output**                                                                                            |
+| MCP Inspector  | The **Server Console** panel on the right                                                                                                      |
+| Any terminal   | Run the server yourself: `node dist/index.js` (from source) or `npx -y devflow-pr-mcp`. It prints startup errors and then waits; press Ctrl+C. |
+
+For more detail, set `DEVFLOW_LOG_LEVEL=debug` in the server's environment.
+
+### Signing in to GitHub
+
+**"No GitHub token found"**
+
+DevFlow found neither `GITHUB_TOKEN` nor a GitHub CLI login.
+
+1. Run `gh auth status`. If it doesn't say "Logged in to github.com", run `gh auth login`
+   (GitHub.com → HTTPS → log in with a web browser).
+2. Restart the host, or switch the server off and on in the Inspector.
+
+**`gh auth login` says the `GH_TOKEN` environment variable is being used**
+
+Your shell sets `GH_TOKEN` (often in `~/.zshrc` or `~/.bashrc`), so the GitHub CLI refuses to store a
+login. Sign in with the variable hidden:
+
+```bash
+env -u GH_TOKEN gh auth login
+env -u GH_TOKEN gh auth status     # should say: Logged in to github.com account <you> (keyring)
+```
+
+**It works in the terminal but not in Claude Desktop, VS Code or the MCP Inspector**
+
+Apps started from the Dock, Start menu or a browser don't see variables set in your shell profile,
+and the MCP Inspector passes only basic ones (such as `HOME` and `PATH`). A token in `GH_TOKEN` or
+`GITHUB_TOKEN` therefore works in the terminal only. Fix it once with a real GitHub CLI login
+(above). Alternatives: paste a token into the Claude Desktop install dialog; add
+`"env": { "GITHUB_TOKEN": "…" }` to the server in `.vscode/mcp.json`; or run the Inspector with
+`-e GITHUB_TOKEN=…` (`npm run inspect` does this for you).
+
+**`[UNAUTHORIZED]` on every request**
+
+The token was rejected.
+
+- If you set `GITHUB_TOKEN`, it **takes priority over the GitHub CLI login**. An old or revoked value
+  there causes this even when `gh auth status` looks fine. Remove it from the host's server config
+  (and from your shell with `unset GITHUB_TOKEN`), or replace it.
+- Otherwise, your GitHub CLI login has expired: `gh auth login`.
+
+**Results are for the wrong GitHub account** (stand-up or review queue shows someone else's work)
+
+DevFlow uses whichever account the token belongs to. Check with `gh auth status`. If you have several
+accounts, switch with `gh auth switch`, or set `GITHUB_TOKEN` to the right account's token.
+
+### Starting the server
+
+**DevFlow shows as "failed" or never connects**
+
+- Check `node --version` is **22 or newer**. Older versions fail at startup.
+- Using nvm, fnm, Volta or asdf? Apps started outside the terminal may find a different (older) Node,
+  or none at all (`spawn node ENOENT`). Use the full path to Node as the command, from `which node`
+  (macOS/Linux) or `where node` (Windows), for example `/Users/you/.nvm/versions/node/v24.11.0/bin/node`.
+- From source: check that `dist/index.js` exists. If not, run `npm run build`.
+- Read the error as described at the top of this section.
+
+**`npx -y devflow-pr-mcp` fails with `404 Not Found`**
+
+The package hasn't been published to npm yet. Install [from source](#step-1-get-devflow) instead.
+
+**The path contains spaces** (for example `/Users/me/My Projects/devflow`)
+
+Keep the quotes: `claude mcp add devflow --scope user -- node "$PWD/dist/index.js"`. In JSON
+configs, write the path normally inside the `args` string; no extra escaping is needed.
+
+**I changed the code, but nothing changed**
+
+Hosts start the server once, when a session starts. Run `npm run build`, then start a new Claude Code
+session, restart Claude Desktop, or switch the server off and on (VS Code, Inspector). For Claude
+Desktop, also rebuild and reinstall the bundle: `npm run bundle`.
+
+### Claude Code
+
+**DevFlow works in one folder but not in others**
+
+`claude mcp add` without `--scope` saves the server for the current folder only. Add it for all your
+projects:
+
+```bash
+claude mcp remove devflow
+claude mcp add devflow --scope user -- npx -y devflow-pr-mcp     # or: node "/full/path/to/dist/index.js"
+```
+
+**`claude mcp add` says `devflow` already exists**
+
+Run `claude mcp remove devflow` (it finds the scope the server was saved in), then add it again.
+
+**DevFlow is connected, but Claude doesn't use it, or the slash commands are missing**
+
+- Servers load when a session starts: run `/exit` and start `claude` again.
+- Slash commands have a prefix: type `/mcp__devflow__review-pr`, not `/review-pr`. Type `/devflow` to
+  list them. See [Slash commands](#slash-commands).
+- Mention DevFlow in the question if Claude reaches for something else: _"Using devflow, how risky
+  is …?"_
+
+**Claude asks permission for every tool call**
+
+Choose "Yes, and don't ask again" once per tool, or allow all DevFlow tools in
+`~/.claude/settings.json`. Every DevFlow tool is read-only:
+
+```json
+{ "permissions": { "allow": ["mcp__devflow"] } }
+```
+
+### Claude Desktop
+
+**Double-clicking `devflow.mcpb` does nothing, or the file opens as a zip**
+
+Update Claude Desktop to the latest version. Then open **Settings → Extensions** and drag the file
+onto that window.
+
+**The extension is enabled, but DevFlow says "No GitHub token found"**
+
+Claude Desktop doesn't see your shell's variables. Sign in with `gh auth login`, or open
+**Settings → Extensions → DevFlow** and paste a token into the token field.
+
+### Using DevFlow
+
+**`[NOT_FOUND]` for a PR or repository**
+
+- Check the link or the `owner/repo#123` reference.
+- Private repository: the signed-in account must have access to it. Open the PR in a browser while
+  signed in as the same account.
+- For release notes, check that the tag or branch exists (`v1.2.0`, not `1.2.0`), or use a date such
+  as `2026-10-01`.
+
+**`[FORBIDDEN]` for an organisation's repositories**
+
+- The organisation may require **SSO**. For the GitHub CLI, run `gh auth refresh` and approve SSO for
+  the organisation when asked. For a personal token, open it under **GitHub → Settings → Developer
+  settings** and click **Configure SSO → Authorize** for the organisation.
+- With a fine-grained token, the organisation may need to approve it, and it must include read
+  access to _Pull requests_, _Contents_, _Commit statuses_, _Checks_ and _Metadata_ for that
+  repository.
+
+**`[RATE_LIMITED]`**
+
+GitHub limits how many requests you can make. The message says how long to wait (often about a
+minute). It usually happens after many searches in a row, for example several release notes or
+stand-ups in quick succession.
+
+**My review queue is empty, or a PR is missing from it**
+
+The queue lists open PRs where **you, or a team you belong to,** are a requested reviewer. GitHub
+removes a PR from it once you submit a review. You can still review any PR by its link.
+
+**CI status says it is unavailable**
+
+The PR's details and review still work. CI results need read access to _Checks_ and _Commit
+statuses_. Fine-grained tokens often lack these.
+
+### GitHub Enterprise and company networks
+
+**GitHub Enterprise Server**
+
+Set `GITHUB_API_URL`, for example `https://github.example.com/api/v3`, and sign in to that host with
+the GitHub CLI: `gh auth login --hostname github.example.com`. DevFlow asks `gh` for that host's
+token automatically.
+
+**`self-signed certificate` or `unable to get local issuer certificate`**
+
+Your company network inspects HTTPS traffic with its own certificate. Ask IT for the certificate
+file (`.pem`) and add it to the server's environment:
+`NODE_EXTRA_CA_CERTS=/path/to/company-ca.pem`.
 
 ## What's inside
 
@@ -192,7 +359,7 @@ to _Pull requests_, _Contents_, _Commit statuses_, _Checks_ and _Metadata_, and 
 `GITHUB_TOKEN`:
 
 ```bash
-claude mcp add devflow --env GITHUB_TOKEN=github_pat_... -- npx -y devflow-pr-mcp
+claude mcp add devflow --scope user --env GITHUB_TOKEN=github_pat_... -- npx -y devflow-pr-mcp
 ```
 
 In Claude Desktop, paste it into the token field when installing.

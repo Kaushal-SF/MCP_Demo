@@ -31,6 +31,9 @@ day before, and do one full dry run.
 
 ## If something goes wrong
 
+The quick fixes below cover the demo itself; [README → Troubleshooting](README.md#troubleshooting)
+covers every setup problem.
+
 | Symptom                          | Fix                                                                                                          |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | DevFlow is missing from the host | Claude Code: `claude mcp list`. Claude Desktop: Settings → Extensions. Restart the host.                     |
