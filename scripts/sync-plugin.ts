@@ -22,6 +22,7 @@
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { format, resolveConfig } from 'prettier';
 
 const root = join(import.meta.dirname, '..');
 const pluginDir = join(root, 'plugins', 'devflow');
@@ -37,7 +38,15 @@ const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
 const manifestPath = join(pluginDir, '.claude-plugin', 'plugin.json');
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { version: string };
 manifest.version = pkg.version;
-writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+// Written through Prettier, not JSON.stringify alone: this file is committed and `format:check`
+// covers it, so raw stringify output would fail CI the moment the version changed.
+writeFileSync(
+  manifestPath,
+  await format(JSON.stringify(manifest, null, 2), {
+    ...(await resolveConfig(manifestPath)),
+    filepath: manifestPath,
+  }),
+);
 
 // Replaced wholesale rather than copied over, so a checklist deleted from checklists/ also
 // disappears from the plugin.

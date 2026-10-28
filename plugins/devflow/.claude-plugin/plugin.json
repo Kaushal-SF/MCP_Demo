@@ -10,19 +10,11 @@
   "homepage": "https://github.com/Kaushal-SF/devflow-mcp#readme",
   "repository": "https://github.com/Kaushal-SF/devflow-mcp",
   "license": "MIT",
-  "keywords": [
-    "github",
-    "code-review",
-    "pull-request",
-    "release-notes",
-    "standup"
-  ],
+  "keywords": ["github", "code-review", "pull-request", "release-notes", "standup"],
   "mcpServers": {
     "devflow": {
       "command": "node",
-      "args": [
-        "${CLAUDE_PLUGIN_ROOT}/server/index.js"
-      ],
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/index.js"],
       "env": {
         "GITHUB_TOKEN": "${user_config.github_token}"
       }
