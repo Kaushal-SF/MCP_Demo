@@ -19,6 +19,7 @@ Each milestone ends with verification, an update to this file, and a git commit.
 | M1     | Scaffold, core infrastructure, stdio transport, 3 read-only tools, tests, CI, docs                                                                                          | ✅ Done (2026-10-15)        |
 | M2     | Resources (review checklists, repo guidelines), prompts (`review-pr`, `standup-summary`, `release-notes`), `generate_release_notes` tool, argument completions, MCP logging | ✅ Done (2026-10-21)        |
 | M3     | Simplify and ship v1.0: zero-config sign-in, single-file build, Claude Desktop installer, demo script                                                                       | ✅ Done (2026-10-21)        |
+| M4     | Publish v1.1: Claude Code plugin marketplace, `/devflow:*` commands, repo renamed to `devflow-mcp`                                                                          | ✅ Done (2026-10-28)        |
 | ~~M4~~ | ~~Streamable HTTP + OAuth, Docker, cloud deployment~~                                                                                                                       | ❌ Dropped (D35)            |
 | ~~M5~~ | ~~Changesets, registry listing~~; npm publish kept as a one-command step                                                                                                    | ❌ Dropped / folded into M3 |
 
@@ -322,20 +323,66 @@ What it changed in the docs:
 
 ---
 
+## M4 — Publish as a Claude Code plugin (2026-10-28)
+
+### What was built
+
+- **The repository is now a plugin marketplace.** `.claude-plugin/marketplace.json` lists one
+  plugin, `plugins/devflow/`, so anyone can run
+  `/plugin install devflow --marketplace Kaushal-SF/devflow-mcp`. No clone, no build, no npm
+  account: the plugin carries the bundled server under `plugins/devflow/server/` (D39).
+- **Three plugin commands** (D40): `/devflow:review-pr`, `/devflow:standup`,
+  `/devflow:release-notes`. Through a plugin, Claude Code names an MCP prompt after its server, so
+  `review-pr` would otherwise have been `/mcp__plugin_devflow_devflow__review-pr`.
+- **`npm run plugin`** restages the server and validates the marketplace; **`npm run verify:plugin`**
+  fails when the committed copy is stale, and CI runs it.
+- **The repository was renamed** `MCP_Demo` → `devflow-mcp`, and every URL in the docs followed.
+
+### Verification
+
+| Check                                                     | Result                                             |
+| --------------------------------------------------------- | -------------------------------------------------- |
+| `claude plugin validate .`                                | ✅ Validation passed                               |
+| `claude plugin marketplace add` + `claude plugin install` | ✅ Installed as `devflow@devflow-mcp` (user scope) |
+| `claude mcp list`                                         | ✅ `plugin:devflow:devflow` Connected              |
+| Real query, no token configured                           | ✅ risk 70 / high — the `gh` login was picked up   |
+| `/devflow:standup 7` in a real session                    | ✅ Yesterday / Today / Blockers, no invented work  |
+| lint, format, typecheck, 162 tests                        | ✅ all pass                                        |
+
+### Learnings
+
+- **A plugin is delivered by cloning the marketplace repository**, so anything the server needs has
+  to be committed. With DevFlow not on npm, that meant committing the 1.7 MB bundle — hence the
+  staleness check, which is the real risk of a committed build artifact.
+- **MCP prompt names are not controllable from a plugin.** The server prefix
+  (`plugin:<plugin>:<server>`) is baked into the slash command, which is why D40 adds commands.
+- **An unset optional `userConfig` value does not reach the server as a literal placeholder.**
+  DevFlow's blank-means-unset handling (written for Claude Desktop) covered it unchanged.
+- **`claude plugin marketplace add .` is rejected**; the source must be `owner/repo`, a URL, or a
+  path with a `./` or absolute prefix.
+
+---
+
 ## What's left
 
 The application is complete. What remains is release and real use:
 
 **To release (needs the owner):**
 
-- [ ] Push the commits to `Kaushal-SF/MCP_Demo`.
-- [ ] `npm login`, then `npm publish` (makes `npx -y devflow-pr-mcp` work for everyone).
+- [x] Push the commits to `Kaushal-SF/devflow-mcp` (repo renamed from `MCP_Demo` on 2026-10-28).
+- [x] Publish as a Claude Code plugin marketplace (D39). Anyone can now run
+      `/plugin install devflow --marketplace Kaushal-SF/devflow-mcp`.
+- [ ] `npm login`, then `npm publish` (makes `npx -y devflow-pr-mcp` work for everyone). Deferred
+      deliberately: an npm name cannot be released again after 72 hours.
+- [ ] Official MCP Registry listing — needs the npm publish first, and the registry is still in
+      preview.
 - [ ] Attach `build/devflow.mcpb` to a GitHub release, so Desktop users can download it.
 
 **Sub-goal 3: integrate with the real workflow (2–4 weeks of use):**
 
-- [ ] Use `/review-pr` on real trainee PRs for two weeks; note time per review before and after.
-- [ ] Use `/release-notes` for one real release and `/standup-summary` daily.
+- [ ] Use `/devflow:review-pr` on real trainee PRs for two weeks; note time per review before and
+      after.
+- [ ] Use `/devflow:release-notes` for one real release and `/devflow:standup` daily.
 - [ ] Have 2–3 teammates install it; collect feedback.
 - [ ] Tune the risk score with real PRs (it counts `docs/` and `scripts/` as production code today).
 

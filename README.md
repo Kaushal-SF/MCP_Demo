@@ -33,28 +33,50 @@ same tasks are also available as ready-made [slash commands](#slash-commands).
   `gh auth status`. DevFlow uses this login, so there is no token to create.
   (No GitHub CLI? See [Use your own token](#use-your-own-token).)
 
-### Step 1: Get DevFlow
+### Claude Code: install the plugin
 
-**From npm** (once `devflow-pr-mcp` is published): nothing to download; `npx` fetches it in step 2.
+One command, with nothing to clone or build — the plugin carries the server with it:
 
-**From source** (works today, before the npm release):
+```
+/plugin install devflow --marketplace Kaushal-SF/devflow-mcp
+```
+
+Or from your shell:
 
 ```bash
-git clone https://github.com/Kaushal-SF/MCP_Demo.git devflow
+claude plugin marketplace add Kaushal-SF/devflow-mcp
+claude plugin install devflow@devflow-mcp
+```
+
+Claude Code asks for an optional GitHub token. **Leave it empty** if you are signed in with the
+GitHub CLI; DevFlow picks that login up on its own. Then start a new session and ask it something
+from [What you can ask](#what-you-can-ask), or run `/devflow:review-pr owner/repo#123`.
+
+To update later, run `claude plugin update devflow@devflow-mcp`. To remove it,
+`claude plugin uninstall devflow@devflow-mcp`.
+
+### Other hosts: install from source
+
+Claude Desktop, VS Code and Cursor install the MCP server directly.
+
+#### Step 1: Get DevFlow
+
+```bash
+git clone https://github.com/Kaushal-SF/devflow-mcp.git devflow
 cd devflow
 npm ci
 npm run build      # creates dist/index.js
 npm run bundle     # optional: creates build/devflow.mcpb for Claude Desktop
 ```
 
-### Step 2: Add it to your AI tool
+#### Step 2: Add it to your AI tool
 
-| Host                  | From npm                                                                            | From source                                                                                         |
-| --------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| **Claude Code**       | `claude mcp add devflow --scope user -- npx -y devflow-pr-mcp`                      | In the `devflow` folder: `claude mcp add devflow --scope user -- node "$PWD/dist/index.js"`         |
-| **Claude Desktop**    | Download `devflow.mcpb` from the GitHub release, double-click it, **Install**       | Double-click `build/devflow.mcpb`, **Install**                                                      |
-| **VS Code**           | `.vscode/mcp.json` below, with `"command": "npx", "args": ["-y", "devflow-pr-mcp"]` | `.vscode/mcp.json` below, with `"command": "node", "args": ["/full/path/to/devflow/dist/index.js"]` |
-| **Cursor and others** | Command `npx`, arguments `-y devflow-pr-mcp`                                        | Command `node`, argument `/full/path/to/devflow/dist/index.js`                                      |
+| Host                  | What to do                                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Claude Desktop**    | Double-click `build/devflow.mcpb`, then **Install**                                                                              |
+| **VS Code**           | `.vscode/mcp.json` below                                                                                                         |
+| **Cursor and others** | Command `node`, argument `/full/path/to/devflow/dist/index.js`                                                                   |
+| **Claude Code**       | Use [the plugin](#claude-code-install-the-plugin) instead, or `claude mcp add devflow --scope user -- node "$PWD/dist/index.js"` |
 
 In Claude Desktop, leave the token field empty if you use the GitHub CLI.
 
@@ -63,7 +85,11 @@ VS Code `.vscode/mcp.json` (or run **MCP: Add Server** from the command palette)
 ```json
 {
   "servers": {
-    "devflow": { "type": "stdio", "command": "npx", "args": ["-y", "devflow-pr-mcp"] }
+    "devflow": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/full/path/to/devflow/dist/index.js"]
+    }
   }
 }
 ```
@@ -78,7 +104,9 @@ These steps work for anyone, because they use a public repository.
 
 **1. Check it's connected**
 
-- Claude Code: `claude mcp list` shows `devflow: … ✓ Connected`. Inside a session, `/mcp` shows it too.
+- Claude Code: `claude mcp list` shows `… ✓ Connected` — as `plugin:devflow:devflow` if you
+  installed the plugin, or as `devflow` if you added the server yourself. Inside a session, `/mcp`
+  shows it too, and `claude plugin list` shows the plugin as `✔ enabled`.
 - Claude Desktop: **Settings → Extensions** shows DevFlow as enabled.
 - VS Code: **MCP: List Servers** shows `devflow` as running.
 
@@ -103,8 +131,8 @@ safe to allow them all.
 opens a web page where you can call each tool by hand:
 
 ```bash
-npm run inspect                                               # from source, in the devflow folder
-npx @modelcontextprotocol/inspector npx -y devflow-pr-mcp     # from npm
+npm run inspect                                    # from source, in the devflow folder
+npx @modelcontextprotocol/inspector node <path>    # <path> = the server's index.js
 ```
 
 In the page, turn the server's switch on (it shows **Connected**), then open **Tools**, pick
@@ -116,35 +144,39 @@ shell variable instead, pass it explicitly with `-e`. `npm run inspect` already 
 `GITHUB_TOKEN` and `GH_TOKEN`:
 
 ```bash
-npx @modelcontextprotocol/inspector -e GITHUB_TOKEN=$GITHUB_TOKEN npx -y devflow-pr-mcp
+npx @modelcontextprotocol/inspector -e GITHUB_TOKEN=$GITHUB_TOKEN node <path>
 ```
 
 ### Slash commands
 
-DevFlow ships three ready-made prompts. Each host shows them differently:
+DevFlow ships three ready-made tasks. Each host shows them differently:
 
-| Prompt        | Claude Code                      | VS Code                        | Claude Desktop                             |
-| ------------- | -------------------------------- | ------------------------------ | ------------------------------------------ |
-| Review a PR   | `/mcp__devflow__review-pr`       | `/mcp.devflow.review-pr`       | **+** button → DevFlow → `review-pr`       |
-| Stand-up      | `/mcp__devflow__standup-summary` | `/mcp.devflow.standup-summary` | **+** button → DevFlow → `standup-summary` |
-| Release notes | `/mcp__devflow__release-notes`   | `/mcp.devflow.release-notes`   | **+** button → DevFlow → `release-notes`   |
+| Task          | Claude Code (plugin)     | VS Code                        | Claude Desktop                             |
+| ------------- | ------------------------ | ------------------------------ | ------------------------------------------ |
+| Review a PR   | `/devflow:review-pr`     | `/mcp.devflow.review-pr`       | **+** button → DevFlow → `review-pr`       |
+| Stand-up      | `/devflow:standup`       | `/mcp.devflow.standup-summary` | **+** button → DevFlow → `standup-summary` |
+| Release notes | `/devflow:release-notes` | `/mcp.devflow.release-notes`   | **+** button → DevFlow → `release-notes`   |
 
-In Claude Code, put arguments after the command, separated by spaces:
-`/mcp__devflow__review-pr owner/repo#123 react` or `/mcp__devflow__standup-summary 3`.
-Type `/devflow` to see them in the command list. The `pr` argument suggests the PRs waiting for your
-review in hosts that support suggestions.
+Put arguments after the command, separated by spaces: `/devflow:review-pr owner/repo#123 react`,
+`/devflow:standup 3`, or `/devflow:release-notes owner/repo v1.2.0 v1.3.0`. Type `/devflow` to see
+them all.
+
+If you added DevFlow to Claude Code as a plain MCP server rather than as the plugin, the same tasks
+appear under their MCP names instead: `/mcp__devflow__review-pr`, `/mcp__devflow__standup-summary`
+and `/mcp__devflow__release-notes`. The `pr` argument suggests the PRs waiting for your review in
+hosts that support suggestions.
 
 ## Troubleshooting
 
 **First, find the actual error message.** It usually says what to do.
 
-| Host           | Where to look                                                                                                                                  |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude Code    | `claude mcp list` (status per server), `/mcp` inside a session (select `devflow` for details), or `claude --debug`                             |
-| Claude Desktop | **Settings → Extensions → DevFlow**, and the log files in `~/Library/Logs/Claude/` (macOS) or `%APPDATA%\Claude\logs` (Windows)                |
-| VS Code        | **MCP: List Servers** → `devflow` → **Show Output**                                                                                            |
-| MCP Inspector  | The **Server Console** panel on the right                                                                                                      |
-| Any terminal   | Run the server yourself: `node dist/index.js` (from source) or `npx -y devflow-pr-mcp`. It prints startup errors and then waits; press Ctrl+C. |
+| Host           | Where to look                                                                                                                                                                        |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Claude Code    | `claude mcp list` (status per server), `/mcp` inside a session (select `devflow` for details), or `claude --debug`                                                                   |
+| Claude Desktop | **Settings → Extensions → DevFlow**, and the log files in `~/Library/Logs/Claude/` (macOS) or `%APPDATA%\Claude\logs` (Windows)                                                      |
+| VS Code        | **MCP: List Servers** → `devflow` → **Show Output**                                                                                                                                  |
+| MCP Inspector  | The **Server Console** panel on the right                                                                                                                                            |
+| Any terminal   | Run the server yourself: `node dist/index.js` (from source), or `node ~/.claude/plugins/**/devflow/server/index.js` (plugin). It prints startup errors and then waits; press Ctrl+C. |
 
 For more detail, set `DEVFLOW_LOG_LEVEL=debug` in the server's environment.
 
@@ -204,7 +236,8 @@ accounts, switch with `gh auth switch`, or set `GITHUB_TOKEN` to the right accou
 
 **`npx -y devflow-pr-mcp` fails with `404 Not Found`**
 
-The package hasn't been published to npm yet. Install [from source](#step-1-get-devflow) instead.
+The package is not on npm. Install [the Claude Code plugin](#claude-code-install-the-plugin), or
+[from source](#step-1-get-devflow) for other hosts.
 
 **The path contains spaces** (for example `/Users/me/My Projects/devflow`)
 
@@ -219,6 +252,21 @@ Desktop, also rebuild and reinstall the bundle: `npm run bundle`.
 
 ### Claude Code
 
+**`/plugin install` says the plugin was not found in the marketplace**
+
+Your copy of the marketplace listing is stale. Refresh it:
+`claude plugin marketplace update devflow-mcp`.
+
+**The plugin installed, but `claude mcp list` has no DevFlow entry**
+
+The plugin's server is listed as `plugin:devflow:devflow`, not `devflow`. If it is missing
+altogether, run `claude plugin list` to check the plugin is `✔ enabled`, then start a new session.
+
+**The plugin is installed and I also added DevFlow with `claude mcp add`**
+
+You will see two servers and two sets of the same tools. Keep one: either
+`claude plugin uninstall devflow@devflow-mcp` or `claude mcp remove devflow`.
+
 **DevFlow works in one folder but not in others**
 
 `claude mcp add` without `--scope` saves the server for the current folder only. Add it for all your
@@ -226,8 +274,11 @@ projects:
 
 ```bash
 claude mcp remove devflow
-claude mcp add devflow --scope user -- npx -y devflow-pr-mcp     # or: node "/full/path/to/dist/index.js"
+claude mcp add devflow --scope user -- node "/full/path/to/devflow/dist/index.js"
 ```
+
+(The plugin is installed for every folder already, so this only applies to a server you added
+yourself.)
 
 **`claude mcp add` says `devflow` already exists**
 
@@ -236,7 +287,7 @@ Run `claude mcp remove devflow` (it finds the scope the server was saved in), th
 **DevFlow is connected, but Claude doesn't use it, or the slash commands are missing**
 
 - Servers load when a session starts: run `/exit` and start `claude` again.
-- Slash commands have a prefix: type `/mcp__devflow__review-pr`, not `/review-pr`. Type `/devflow` to
+- Slash commands have a prefix: type `/devflow:review-pr`, not `/review-pr`. Type `/devflow` to
   list them. See [Slash commands](#slash-commands).
 - Mention DevFlow in the question if Claude reaches for something else: _"Using devflow, how risky
   is …?"_
@@ -247,8 +298,10 @@ Choose "Yes, and don't ask again" once per tool, or allow all DevFlow tools in
 `~/.claude/settings.json`. Every DevFlow tool is read-only:
 
 ```json
-{ "permissions": { "allow": ["mcp__devflow"] } }
+{ "permissions": { "allow": ["mcp__plugin_devflow_devflow", "mcp__devflow"] } }
 ```
+
+The first line covers the plugin, the second a server you added yourself; keeping both is harmless.
 
 ### Claude Desktop
 
@@ -332,6 +385,9 @@ file (`.pem`) and add it to the server's environment:
 | `standup-summary` | `days?`, `repo?`      | Yesterday / Today / Blockers                                                          |
 | `release-notes`   | `repo`, `from`, `to?` | Reader-friendly release notes                                                         |
 
+**Plugin commands** (Claude Code plugin only): `/devflow:review-pr`, `/devflow:standup` and
+`/devflow:release-notes`, which run the same tasks under a shorter name.
+
 **Resources**: reference material you can attach in hosts that support it.
 
 | URI                                         | Content                                                                       |
@@ -359,10 +415,12 @@ to _Pull requests_, _Contents_, _Commit statuses_, _Checks_ and _Metadata_, and 
 `GITHUB_TOKEN`:
 
 ```bash
-claude mcp add devflow --scope user --env GITHUB_TOKEN=github_pat_... -- npx -y devflow-pr-mcp
+claude mcp add devflow --scope user --env GITHUB_TOKEN=github_pat_... -- node "/full/path/to/devflow/dist/index.js"
 ```
 
-In Claude Desktop, paste it into the token field when installing.
+In Claude Desktop, paste it into the token field when installing. With the Claude Code plugin, run
+`/plugin configure devflow@devflow-mcp` and paste it there; it is stored in your system keychain,
+not in a settings file.
 
 ## Security
 

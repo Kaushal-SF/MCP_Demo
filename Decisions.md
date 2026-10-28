@@ -687,3 +687,43 @@ _Entries D25–D34 were added in Milestone 2 (2026-10-21)._
   also keeps its dependencies out of `npm audit`.
 - **Revisit when:** The bundle format changes, or the project is published to a registry that
   Claude Desktop installs from directly.
+
+## D39. Distribute through a Claude Code plugin marketplace, not npm
+
+- **Status:** ✅ Accepted · 2026-10-28
+- **Context:** DevFlow needed a route to general availability. The options were npm plus the
+  official MCP Registry, a GitHub release carrying the `.mcpb`, and a Claude Code plugin
+  marketplace. The MCP Registry is still in preview, and it only stores metadata: it requires the
+  package on npm first. Publishing to npm takes a name permanently and can only be undone within
+  72 hours.
+- **Decision:** Publish the repository itself as a Claude Code plugin marketplace
+  (`.claude-plugin/marketplace.json`), with one plugin in `plugins/devflow/`. Users install with
+  `/plugin install devflow --marketplace Kaushal-SF/devflow-mcp`. npm, the MCP Registry and GitHub
+  releases are deliberately left for later.
+- **Why:** It is the shortest path for the audience DevFlow is actually for — Claude Code users —
+  and it needs no external account, no submission and no permanent name reservation. The
+  marketplace lives in the same repository as the code, so a listing can never point at something
+  that no longer exists.
+- **Trade-offs:** Claude Code only; other hosts still install from source. The built server is
+  committed to the repository, since a plugin is delivered by cloning it and DevFlow is not on a
+  package registry — about 1.7 MB per release of the bundle from D37. `npm run plugin` restages it
+  and `npm run verify:plugin` fails CI when it is stale, which keeps the commit honest.
+- **Revisit when:** DevFlow is published to npm, which makes the MCP Registry possible and would
+  let the plugin fetch the server with `npx` rather than carrying it.
+
+## D40. Plugin commands alongside the MCP prompts
+
+- **Status:** ✅ Accepted · 2026-10-28
+- **Context:** The server's three prompts are the main way people run DevFlow. Through a plugin,
+  Claude Code names an MCP prompt after its server, which here is `plugin:devflow:devflow`, so
+  `review-pr` becomes `/mcp__plugin_devflow_devflow__review-pr` — too long to type or demo.
+- **Decision:** Add three plugin commands in `plugins/devflow/commands/`, which Claude Code
+  namespaces under the plugin: `/devflow:review-pr`, `/devflow:standup`,
+  `/devflow:release-notes`. The MCP prompts stay as they are for every other host.
+- **Why:** The command name is the first thing anyone sees, and plugin commands are the native
+  surface for a plugin. The MCP prompts cannot be renamed to achieve this.
+- **Trade-offs:** The workflow is now written in two places. The commands are deliberately thin —
+  they name the tool sequence and what to report, and leave the detail to the tool descriptions —
+  so the duplication is a few lines rather than the whole prompt.
+- **Revisit when:** Claude Code lets a plugin alias its MCP prompts, or the two descriptions drift
+  apart in practice.

@@ -7,8 +7,8 @@
   "description": "Pull-request review assistant: PR context, risk, diffs, checklists, stand-ups and release notes. Read-only.",
   "long_description": "DevFlow gives Claude the context a reviewer gathers by hand: PR details, the diff that matters, CI status, linked issues, a risk score that says where to look first, review checklists, your recent activity for stand-ups, and release notes between two tags. It only reads from GitHub; it never changes anything.\n\nIf you are signed in with the GitHub CLI (`gh auth login`), leave the token field empty.",
   "author": { "name": "Kaushal-SF", "url": "https://github.com/Kaushal-SF" },
-  "repository": { "type": "git", "url": "https://github.com/Kaushal-SF/MCP_Demo" },
-  "homepage": "https://github.com/Kaushal-SF/MCP_Demo#readme",
+  "repository": { "type": "git", "url": "https://github.com/Kaushal-SF/devflow-mcp" },
+  "homepage": "https://github.com/Kaushal-SF/devflow-mcp#readme",
   "license": "MIT",
   "keywords": ["github", "code-review", "pull-request", "release-notes", "standup"],
   "server": {

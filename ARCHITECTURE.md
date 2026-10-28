@@ -51,25 +51,28 @@ services, tools, resources or prompts. Everything a registration needs arrives t
 
 ## Directory layout
 
-| Path                    | Responsibility                                                                                      |
-| ----------------------- | --------------------------------------------------------------------------------------------------- |
-| `src/index.ts`          | Composition root: parse flags, load config, resolve the token, build dependencies, start stdio      |
-| `src/config.ts`         | zod-validated env config; GitHub token from env or the `gh` CLI login (D36)                         |
-| `src/context.ts`        | `ServerContext`: the dependency bundle passed to every registration                                 |
-| `src/server.ts`         | `createServer(ctx)`: transport-agnostic server factory                                              |
-| `src/transports/`       | stdio, the only transport (D35)                                                                     |
-| `src/tools/`            | Tool registrations + `schemas.ts` (input/output schemas, compile-time drift checks)                 |
-| `src/resources/`        | Resource-template registrations (checklists, repo guidelines)                                       |
-| `src/prompts/`          | Prompt registrations with argument completion                                                       |
-| `src/services/`         | Business logic: context, risk, diff, queue, activity, release notes, guidelines, checklists         |
-| `src/clients/github.ts` | Domain types, `GitHubClient` port, Octokit adapter, HTTP error mapping                              |
-| `src/lib/`              | Cross-cutting helpers (see diagram)                                                                 |
-| `checklists/`           | Bundled review checklists (Markdown); replaceable via `DEVFLOW_CHECKLISTS_DIR`                      |
-| `test/unit/`            | Services, lib, log bridge, and the Octokit adapter (against msw-mocked HTTP)                        |
-| `test/integration/`     | Real MCP `Client` ↔ server over `InMemoryTransport`: tools, resources, prompts, completion, logging |
-| `scripts/smoke.ts`      | Live end-to-end check: spawns `dist/index.js` over stdio and exercises every capability             |
-| `scripts/bundle.ts`     | Builds the Claude Desktop installer `build/devflow.mcpb` from `manifest.json` (D38)                 |
-| `manifest.json`         | MCP Bundle manifest: how Claude Desktop starts DevFlow and which settings it asks for               |
+| Path                     | Responsibility                                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| `src/index.ts`           | Composition root: parse flags, load config, resolve the token, build dependencies, start stdio      |
+| `src/config.ts`          | zod-validated env config; GitHub token from env or the `gh` CLI login (D36)                         |
+| `src/context.ts`         | `ServerContext`: the dependency bundle passed to every registration                                 |
+| `src/server.ts`          | `createServer(ctx)`: transport-agnostic server factory                                              |
+| `src/transports/`        | stdio, the only transport (D35)                                                                     |
+| `src/tools/`             | Tool registrations + `schemas.ts` (input/output schemas, compile-time drift checks)                 |
+| `src/resources/`         | Resource-template registrations (checklists, repo guidelines)                                       |
+| `src/prompts/`           | Prompt registrations with argument completion                                                       |
+| `src/services/`          | Business logic: context, risk, diff, queue, activity, release notes, guidelines, checklists         |
+| `src/clients/github.ts`  | Domain types, `GitHubClient` port, Octokit adapter, HTTP error mapping                              |
+| `src/lib/`               | Cross-cutting helpers (see diagram)                                                                 |
+| `checklists/`            | Bundled review checklists (Markdown); replaceable via `DEVFLOW_CHECKLISTS_DIR`                      |
+| `test/unit/`             | Services, lib, log bridge, and the Octokit adapter (against msw-mocked HTTP)                        |
+| `test/integration/`      | Real MCP `Client` ↔ server over `InMemoryTransport`: tools, resources, prompts, completion, logging |
+| `scripts/smoke.ts`       | Live end-to-end check: spawns `dist/index.js` over stdio and exercises every capability             |
+| `scripts/bundle.ts`      | Builds the Claude Desktop installer `build/devflow.mcpb` from `manifest.json` (D38)                 |
+| `scripts/sync-plugin.ts` | Restages the Claude Code plugin under `plugins/devflow/server/` and validates it (D39)              |
+| `.claude-plugin/`        | Marketplace manifest listing the plugins this repository publishes (D39)                            |
+| `plugins/devflow/`       | The Claude Code plugin: manifest, `/devflow:*` commands (D40) and the bundled server                |
+| `manifest.json`          | MCP Bundle manifest: how Claude Desktop starts DevFlow and which settings it asks for               |
 
 ## Request lifecycle (`tools/call`)
 
@@ -109,11 +112,16 @@ recorded in **[Decisions.md](Decisions.md)** (D1–D38). Highlights:
 `npm run build` bundles the server and **all** its dependencies into one file, `dist/index.js`
 (D37). The same file is used three ways:
 
-| Channel        | How users get it                              | Built by                     |
-| -------------- | --------------------------------------------- | ---------------------------- |
-| npm            | `npx -y devflow-pr-mcp` (after `npm publish`) | `npm publish` runs the build |
-| Claude Desktop | Double-click `devflow.mcpb`                   | `npm run bundle` → `build/`  |
-| From source    | `node /path/to/dist/index.js`                 | `npm run build`              |
+| Channel        | How users get it                                               | Built by                      |
+| -------------- | -------------------------------------------------------------- | ----------------------------- |
+| Claude Code    | `/plugin install devflow --marketplace Kaushal-SF/devflow-mcp` | `npm run plugin` → `plugins/` |
+| Claude Desktop | Double-click `devflow.mcpb`                                    | `npm run bundle` → `build/`   |
+| From source    | `node /path/to/dist/index.js`                                  | `npm run build`               |
+| npm            | `npx -y devflow-pr-mcp` (not published; see D39)               | `npm publish` runs the build  |
+
+The Claude Code plugin is the published route (D39). Because a plugin is delivered by cloning this
+repository, the plugin carries its own copy of the bundled server under `plugins/devflow/server/`,
+which `npm run plugin` restages and CI checks for staleness.
 
 ## Testing strategy
 

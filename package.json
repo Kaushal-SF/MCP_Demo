@@ -1,15 +1,15 @@
 {
   "name": "devflow-pr-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Pull-request review assistant for Claude and other AI tools: PR context, risk, diffs, checklists, stand-ups and release notes. Read-only, runs locally.",
   "type": "module",
   "license": "MIT",
   "author": "Kaushal-SF",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Kaushal-SF/MCP_Demo.git"
+    "url": "git+https://github.com/Kaushal-SF/devflow-mcp.git"
   },
-  "homepage": "https://github.com/Kaushal-SF/MCP_Demo#readme",
+  "homepage": "https://github.com/Kaushal-SF/devflow-mcp#readme",
   "bin": {
     "devflow-mcp": "dist/index.js"
   },
@@ -34,6 +34,8 @@
     "inspect": "npm run build && npx -y @modelcontextprotocol/inspector@2.12.0 -e \"GITHUB_TOKEN=${GITHUB_TOKEN:-$GH_TOKEN}\" node dist/index.js",
     "smoke": "tsx scripts/smoke.ts",
     "bundle": "npm run build && tsx scripts/bundle.ts",
+    "plugin": "npm run build && tsx scripts/sync-plugin.ts",
+    "verify:plugin": "npm run plugin && git diff --exit-code -- plugins",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {

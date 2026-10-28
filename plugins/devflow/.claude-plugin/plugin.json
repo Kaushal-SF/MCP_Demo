@@ -1,0 +1,39 @@
+{
+  "name": "devflow",
+  "displayName": "DevFlow",
+  "version": "1.1.0",
+  "description": "PR context, risk scores, diffs, review checklists, stand-ups and release notes from GitHub. Read-only.",
+  "author": {
+    "name": "Kaushal-SF",
+    "url": "https://github.com/Kaushal-SF"
+  },
+  "homepage": "https://github.com/Kaushal-SF/devflow-mcp#readme",
+  "repository": "https://github.com/Kaushal-SF/devflow-mcp",
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "code-review",
+    "pull-request",
+    "release-notes",
+    "standup"
+  ],
+  "mcpServers": {
+    "devflow": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/server/index.js"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "${user_config.github_token}"
+      }
+    }
+  },
+  "userConfig": {
+    "github_token": {
+      "type": "string",
+      "title": "GitHub token (optional)",
+      "description": "Leave this empty if you are signed in with the GitHub CLI (gh auth login); DevFlow picks that login up on its own. Otherwise paste a token with read access to your repositories.",
+      "sensitive": true
+    }
+  }
+}

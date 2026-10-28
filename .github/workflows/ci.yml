@@ -36,3 +36,5 @@ jobs:
         run: node dist/index.js --version
       - name: Claude Desktop installer builds and validates
         run: npm run bundle
+      - name: Claude Code plugin is in step with the source
+        run: npm run verify:plugin

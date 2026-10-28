@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-10-28
+
+Published as a Claude Code plugin. See Decisions.md D39–D40.
+
+### Added
+
+- **Claude Code plugin marketplace.** The repository is now a marketplace
+  (`.claude-plugin/marketplace.json`) holding one plugin, `plugins/devflow/`. Install it with
+  `/plugin install devflow --marketplace Kaushal-SF/devflow-mcp` — no clone and no build, because
+  the plugin carries the bundled server.
+- **Plugin commands** `/devflow:review-pr`, `/devflow:standup` and `/devflow:release-notes`, which
+  run the existing tasks under a shorter name than the MCP prompts allow.
+- `npm run plugin` restages the plugin's server from the current build, and `npm run verify:plugin`
+  fails if the committed copy is out of date. CI runs the second.
+
+### Changed
+
+- **The repository moved to `Kaushal-SF/devflow-mcp`** (from `MCP_Demo`). GitHub redirects the old
+  URL, so existing clones keep working.
+- The README leads with the plugin install for Claude Code; other hosts still install from source.
+
 ## [1.0.0] - 2026-10-21
 
 First complete release: simple to install, simple to demo. See Decisions.md D35–D38.

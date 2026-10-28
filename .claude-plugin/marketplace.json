@@ -1,0 +1,15 @@
+{
+  "name": "devflow-mcp",
+  "description": "DevFlow: pull-request review tools for Claude Code, backed by a read-only GitHub MCP server.",
+  "owner": {
+    "name": "Kaushal-SF",
+    "url": "https://github.com/Kaushal-SF"
+  },
+  "plugins": [
+    {
+      "name": "devflow",
+      "source": "./plugins/devflow",
+      "description": "PR context, risk scores, diffs, review checklists, stand-ups and release notes from GitHub. Read-only."
+    }
+  ]
+}
